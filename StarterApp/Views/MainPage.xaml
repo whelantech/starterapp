@@ -71,7 +71,7 @@
                                VerticalOptions="Center"
                                HorizontalOptions="StartAndExpand" />
                         <Button Text="×"
-                                Command="{Binding ClearErrorCommand}"
+                                Command="{Binding ClearErrorMessageCommand}"
                                 BackgroundColor="Transparent"
                                 TextColor="{AppThemeBinding Light=#D32F2F, Dark=#EF5350}"
                                 FontSize="18"
@@ -123,6 +123,7 @@
                                    TextColor="{AppThemeBinding Light={StaticResource Gray400}, Dark={StaticResource Gray600}}" />
                         </Grid>
                     </Border>
+                    
 
                     <!-- Settings Card -->
                     <Border BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Gray900}}"
@@ -157,6 +158,66 @@
                         </Grid>
                     </Border>
 
+                    <!-- Create Item Card -->
+                    <Border
+                        BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Gray900}}"
+                        Stroke="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray700}}"
+                        StrokeThickness="1"
+                        Padding="20"
+                        HeightRequest="80">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="12" />
+                        </Border.StrokeShape>
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding NavigateToCreateItemCommand}" />
+                        </Border.GestureRecognizers>
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                            <Label Grid.Column="0"
+                                   Text="➕"
+                                   FontSize="24"
+                                   VerticalOptions="Center" />
+                            <StackLayout Grid.Column="1" Margin="15,0,0,0" VerticalOptions="Center">
+                                <Label Text="Create Item"
+                                       FontSize="16"
+                                       FontAttributes="Bold" />
+                                <Label Text="Create a new item to rent"
+                                       FontSize="12"
+                                       TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray400}}" />
+                            </StackLayout>
+                        </Grid>
+                    </Border>
+
+                    <!-- Items List Card -->
+                    <Border
+                        BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Gray900}}"
+                        Stroke="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray700}}"
+                        StrokeThickness="1"
+                        Padding="20"
+                        HeightRequest="80">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="12" />
+                        </Border.StrokeShape>
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding NavigateToItemsListCommand}" />
+                        </Border.GestureRecognizers>
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                            <Label Grid.Column="0"
+                                   Text="📦"
+                                   FontSize="24"
+                                   VerticalOptions="Center" />
+                            <StackLayout Grid.Column="1" Margin="15,0,0,0" VerticalOptions="Center">
+                                <Label Text="Create Item"
+                                       FontSize="16"
+                                       FontAttributes="Bold" />
+                                <Label Text="Create a new item to rent"
+                                       FontSize="12"
+                                       TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray400}}" />
+                            </StackLayout>
+                        </Grid>
+                    </Border>
+
+
+
                     <!-- Users Card (Only visible for admins) -->
                     <Border BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Gray900}}"
                             Stroke="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray700}}"
@@ -190,6 +251,14 @@
                                    TextColor="{AppThemeBinding Light={StaticResource Gray400}, Dark={StaticResource Gray600}}" />
                         </Grid>
                     </Border>
+
+                    <!-- Test Create Item Button (TEMP)
+                    <Button Text="➕ Test Create Item"
+                            Command="{Binding NavigateToCreateItemCommand}"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}"
+                            TextColor="White"
+                            HeightRequest="50"
+                            CornerRadius="8" /> -->
 
                 </StackLayout>
             </Grid>

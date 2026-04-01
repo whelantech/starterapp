@@ -9,10 +9,10 @@ using StarterApp.Database.Data;
 
 #nullable disable
 
-namespace StarterApp.Database.Migrations
+namespace StarterApp.Migrations.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260210141124_InitialCreate")]
+    [Migration("20260326155834_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -20,10 +20,150 @@ namespace StarterApp.Database.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.6")
+                .HasAnnotation("ProductVersion", "10.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("StarterApp.Database.Models.Category", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ColorHex")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("categories");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            ColorHex = "#4CAF50",
+                            Description = "Electronics items like laptops, tablets, smartphones, etc.",
+                            Name = "Electronics"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            ColorHex = "#2196F3",
+                            Description = "Books like novels, textbooks, etc.",
+                            Name = "Books"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            ColorHex = "#FF9800",
+                            Description = "Furniture items like sofas, chairs, beds, tables, etc.",
+                            Name = "Furniture"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            ColorHex = "#E91E63",
+                            Description = "Home items like appliances, decor, household items, etc.",
+                            Name = "Home"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            ColorHex = "#E91E63",
+                            Description = "Garden items like gardening tools, lawnmowers, etc.",
+                            Name = "Garden"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            ColorHex = "#E91E63",
+                            Description = "Tools like hammers, screwdrivers, Drills etc.",
+                            Name = "Tools"
+                        },
+                        new
+                        {
+                            Id = 7,
+                            ColorHex = "#E91E63",
+                            Description = "Automotive items like cars, motorcycles, car parts, etc.",
+                            Name = "Automotive"
+                        },
+                        new
+                        {
+                            Id = 8,
+                            ColorHex = "#E91E63",
+                            Description = "Other items not categorized",
+                            Name = "Other"
+                        });
+                });
+
+            modelBuilder.Entity("StarterApp.Database.Models.Item", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("AverageRating")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("CategoryId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("DailyRate")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int?>("ImageUrl")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsAvailable")
+                        .HasColumnType("boolean");
+
+                    b.Property<int?>("OwnerId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("OwnerName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.ToTable("Items");
+                });
 
             modelBuilder.Entity("StarterApp.Database.Models.Role", b =>
                 {
@@ -143,6 +283,16 @@ namespace StarterApp.Database.Migrations
                     b.ToTable("user_role");
                 });
 
+            modelBuilder.Entity("StarterApp.Database.Models.Item", b =>
+                {
+                    b.HasOne("StarterApp.Database.Models.Category", "Category")
+                        .WithMany("Items")
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Category");
+                });
+
             modelBuilder.Entity("StarterApp.Database.Models.UserRole", b =>
                 {
                     b.HasOne("StarterApp.Database.Models.Role", "Role")
@@ -160,6 +310,11 @@ namespace StarterApp.Database.Migrations
                     b.Navigation("Role");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("StarterApp.Database.Models.Category", b =>
+                {
+                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("StarterApp.Database.Models.Role", b =>

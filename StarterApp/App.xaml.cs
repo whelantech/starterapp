@@ -1,4 +1,5 @@
-﻿using StarterApp.ViewModels;
+using StarterApp.ViewModels;
+using StarterApp.Services;
 
 namespace StarterApp;
 
@@ -10,12 +11,22 @@ public partial class App : Application
 		_serviceProvider = serviceProvider;
 		InitializeComponent();
 
+		_ = RestoreStoredAuthAsync();
+
 		Routing.RegisterRoute(nameof(Views.MainPage), typeof(Views.MainPage));
 		Routing.RegisterRoute(nameof(Views.LoginPage), typeof(Views.LoginPage));
 		Routing.RegisterRoute(nameof(Views.RegisterPage), typeof(Views.RegisterPage));
 		Routing.RegisterRoute(nameof(Views.UserListPage), typeof(Views.UserListPage));
 		Routing.RegisterRoute(nameof(Views.UserDetailPage), typeof(Views.UserDetailPage));
 		Routing.RegisterRoute(nameof(Views.TempPage), typeof(Views.TempPage));
+		Routing.RegisterRoute(nameof(Views.CreateItemPage), typeof(Views.CreateItemPage));
+	}
+
+	private async Task RestoreStoredAuthAsync()
+	{
+		var auth = _serviceProvider.GetService<IAuthenticationService>();
+		if (auth is ApiAuthenticationService apiAuth)
+			await apiAuth.InitializeAsync();
 	}
 
 	protected override Window CreateWindow(IActivationState? activationState)

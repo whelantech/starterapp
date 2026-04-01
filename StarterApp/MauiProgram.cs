@@ -28,13 +28,15 @@ public static class MauiProgram
                 BaseAddress = new Uri("https://set09102-api.b-davison.workers.dev/")
             };
             builder.Services.AddSingleton(httpClient);
+            builder.Services.AddSingleton<AuthTokenStoreService>();
             builder.Services.AddSingleton<IAuthenticationService, ApiAuthenticationService>();
         }
         else
         {
-            builder.Services.AddDbContext<AppDbContext>();
             builder.Services.AddSingleton<IAuthenticationService, AuthenticationService>();
         }
+        // DbContext needed for Items feature (works with both API and local auth)
+        builder.Services.AddDbContext<AppDbContext>();
         // const bool useSharedApi = false;
         builder
             .UseMauiApp<App>()
@@ -65,6 +67,8 @@ public static class MauiProgram
         builder.Services.AddTransient<UserDetailViewModel>();
         builder.Services.AddSingleton<TempViewModel>();
         builder.Services.AddTransient<TempPage>();
+        builder.Services.AddTransient<CreateItemViewModel>();
+        builder.Services.AddTransient<CreateItemPage>();
 
 #if DEBUG
         builder.Logging.AddDebug();
