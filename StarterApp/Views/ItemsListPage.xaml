@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<ContentPage x:Class="StarterApp.Views.ItemsPage"
+             xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:StarterApp.ViewModels"
+             xmlns:models="clr-namespace:StarterApp.Database.Models;assembly=StarterApp.Database"
+             Title="{Binding Title}">
+
+    <ContentPage.ToolbarItems>
+        <!-- Add button in toolbar -->
+        <ToolbarItem Text="Add"
+                     Command="{Binding AddItemCommand}"
+                     IconImageSource="add_icon.png" />
+    </ContentPage.ToolbarItems>
+
+    <Grid RowDefinitions="Auto,*" Padding="0">
+
+        <!-- Category Filter -->
+        <Border Grid.Row="0"
+                Margin="15,10"
+                Stroke="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}"
+                StrokeThickness="1"
+                BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Gray900}}">
+            <Border.StrokeShape>
+                <RoundRectangle CornerRadius="8" />
+            </Border.StrokeShape>
+            <Picker ItemsSource="{Binding Categories}"
+                    ItemDisplayBinding="{Binding Name}"
+                    SelectedItem="{Binding SelectedCategory}"
+                    Title="Filter by category"
+                    Margin="10" />
+        </Border>
+
+        <!-- Items List with Pull-to-Refresh -->
+        <RefreshView Grid.Row="1"
+                     IsRefreshing="{Binding IsRefreshing}"
+                     Command="{Binding RefreshCommand}">
+
+            <CollectionView ItemsSource="{Binding Items}"
+                            SelectionMode="None">
+
+                <!-- Empty state -->
+                <CollectionView.EmptyView>
+                    <StackLayout Padding="20" VerticalOptions="Center">
+                        <Label Text="📦"
+                               FontSize="48"
+                               HorizontalOptions="Center" />
+                        <Label Text="No items yet"
+                               FontSize="20"
+                               FontAttributes="Bold"
+                               HorizontalOptions="Center"
+                               Margin="0,10,0,5" />
+                        <Label Text="Tap the + button to create your first item"
+                               HorizontalOptions="Center"
+                               TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray400}}" />
+                    </StackLayout>
+                </CollectionView.EmptyView>
+
+                <!-- Item template -->
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:Item">
+                        <SwipeView>
+
+                            <!-- Swipe actions -->
+                            <SwipeView.RightItems>
+                                <SwipeItems>
+                                    <SwipeItem Text="Delete"
+                                               BackgroundColor="#F44336"
+                                               Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ItemListViewModel}}, Path=DeleteItemCommand}"
+                                               CommandParameter="{Binding .}" />
+                                </SwipeItems>
+                            </SwipeView.RightItems>
+
+                            <!-- Item content -->
+                            <Border Margin="15,5"
+                                    Padding="15"
+                                    Stroke="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}"
+                                    StrokeThickness="1"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Gray900}}">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="8" />
+                                </Border.StrokeShape>
+
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ItemListViewModel}}, Path=EditItemCommand}"
+                                        CommandParameter="{Binding .}" />
+                                </Border.GestureRecognizers>
+
+                                <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="5">
+
+                                    <!-- Category badge -->
+                                    <Border Grid.Row="0"
+                                            BackgroundColor="{Binding Category.ColorHex}"
+                                            Padding="8,4"
+                                            HorizontalOptions="Start"
+                                            IsVisible="{Binding Category, Converter={StaticResource IsNotNullConverter}}"
+                                            Margin="0,0,0,5">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="4" />
+                                        </Border.StrokeShape>
+                                        <Label Text="{Binding Category.Name}"
+                                               TextColor="White"
+                                               FontSize="12"
+                                               FontAttributes="Bold" />
+                                    </Border>
+
+                                    <!-- Title -->
+                                    <Label Grid.Row="1"
+                                           Text="{Binding Title}"
+                                           FontSize="18"
+                                           FontAttributes="Bold"
+                                           LineBreakMode="TailTruncation" />
+
+                                    <!-- Content preview -->
+                                    <Label Grid.Row="2"
+                                           Text="{Binding DescriptionPreview}"
+                                           FontSize="14"
+                                           TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray400}}"
+                                           LineBreakMode="TailTruncation"
+                                           MaxLines="2" />
+
+                                    <Label Grid.Row="3"
+                                           Text="{Binding CreatedAt, StringFormat='Listed {0:MMM dd, yyyy}'}"
+                                           FontSize="12"
+                                           TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray500}}"
+                                           Margin="0,5,0,0" />
+
+                                </Grid>
+                            </Border>
+                        </SwipeView>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+
+            </CollectionView>
+
+        </RefreshView>
+
+        <!-- Loading Indicator -->
+        <ActivityIndicator Grid.Row="1"
+                           IsVisible="{Binding IsBusy}"
+                           IsRunning="{Binding IsBusy}"
+                           Color="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}"
+                           VerticalOptions="Center"
+                           HorizontalOptions="Center" />
+
+    </Grid>
+</ContentPage>

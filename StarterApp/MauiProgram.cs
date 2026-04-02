@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 using StarterApp.ViewModels;
 using StarterApp.Database.Data;
 using StarterApp.Views;
-using System.Diagnostics;
+using StarterApp.Database.Repositories;
 using StarterApp.Services;
 
 namespace StarterApp;
@@ -13,29 +13,37 @@ public static class MauiProgram
     {
         var builder = MauiApp.CreateBuilder();
 
-        // -------------------------------------------------------------------
+// -------------------------------------------------------------------
 // Set useSharedApi to true to connect to the shared REST API,
 // or false to use the local PostgreSQL database.
 // This is an example of dependency injection — the ViewModels do
 // not change regardless of which implementation is registered here.
 // -------------------------------------------------------------------
-        const bool useSharedApi = true;
+        // Not `const` so the local-DB branch stays reachable for the compiler when toggling.
+        var useSharedApi = false;
+        const string ApiBaseUrl = "https://set09102-api.b-davison.workers.dev/";
 
         if (useSharedApi)
         {
-            var httpClient = new HttpClient
+            // One HttpClient for auth + API repository so Bearer tokens set at login apply to /items, etc.
+            builder.Services.AddSingleton(_ =>
             {
-                BaseAddress = new Uri("https://set09102-api.b-davison.workers.dev/")
-            };
-            builder.Services.AddSingleton(httpClient);
+                var client = new HttpClient { BaseAddress = new Uri(ApiBaseUrl) };
+                client.DefaultRequestHeaders.Add("Accept", "application/json");
+                return client;
+            });
+            builder.Services.AddSingleton<IItemRepository, ApiItemRepository>();
+            builder.Services.AddSingleton<AuthTokenStoreService>();
             builder.Services.AddSingleton<IAuthenticationService, ApiAuthenticationService>();
         }
         else
         {
-            builder.Services.AddDbContext<AppDbContext>();
             builder.Services.AddSingleton<IAuthenticationService, AuthenticationService>();
+            builder.Services.AddSingleton<IItemRepository, ItemRepository>();
         }
-        // const bool useSharedApi = false;
+
+        builder.Services.AddDbContext<AppDbContext>();
+
         builder
             .UseMauiApp<App>()
             .ConfigureFonts(fonts =>
@@ -44,9 +52,6 @@ public static class MauiProgram
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
             });
 
-        //builder.Services.AddDbContext<AppDbContext>();
-
-        //builder.Services.AddSingleton<IAuthenticationService, AuthenticationService>();
         builder.Services.AddSingleton<INavigationService, NavigationService>();
 
         builder.Services.AddSingleton<AppShellViewModel>();
@@ -65,6 +70,10 @@ public static class MauiProgram
         builder.Services.AddTransient<UserDetailViewModel>();
         builder.Services.AddSingleton<TempViewModel>();
         builder.Services.AddTransient<TempPage>();
+        builder.Services.AddTransient<CreateItemViewModel>();
+        builder.Services.AddTransient<CreateItemPage>();
+        builder.Services.AddTransient<ItemListViewModel>();
+        builder.Services.AddTransient<ItemsPage>();
 
 #if DEBUG
         builder.Logging.AddDebug();

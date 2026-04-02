@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using StarterApp.Database.Models;
@@ -31,16 +31,32 @@ public class AppDbContext : DbContext
             connectionString = config.GetConnectionString("DevelopmentConnection");
         }
 
-        optionsBuilder.UseNpgsql(connectionString);
+        optionsBuilder.UseNpgsql(
+            connectionString,
+            npgsql => npgsql.MigrationsAssembly("StarterApp.Migrations"));
     }
 
     public DbSet<Role> Roles { get; set; }
     public DbSet<User> Users { get; set; }
     public DbSet<UserRole> UserRoles { get; set; }
+    public DbSet<Category> Categories { get; set; }
+    public DbSet<Item> Items { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        // Configure Category entity
+        modelBuilder.Entity<Category>(entity =>
+        {
+            // Unique constraint on category name (can't have duplicate "Work" categories)
+            entity.HasIndex(e => e.Name).IsUnique();
+
+            // Ensure proper column types and constraints
+            entity.Property(e => e.Name).HasMaxLength(50);
+            entity.Property(e => e.ColorHex).HasMaxLength(7);
+            entity.Property(e => e.Description).HasMaxLength(200);
+        });
 
         // Configure User entity
         modelBuilder.Entity<User>(entity =>
@@ -51,6 +67,26 @@ public class AppDbContext : DbContext
             entity.Property(e => e.LastName).HasMaxLength(100);
             entity.Property(e => e.PasswordHash).HasMaxLength(255);
             entity.Property(e => e.PasswordSalt).HasMaxLength(255);
+        });
+
+        // Configure Item entity
+        modelBuilder.Entity<Item>(entity =>
+        {
+            // Index on CategoryId for faster filtering by category
+            entity.HasIndex(e => e.CategoryId);
+
+            // Index on CreatedAt / UpdatedAt for sorting by date
+            entity.HasIndex(e => e.CreatedAt);
+
+            // Ensure proper column types
+            entity.Property(e => e.Title).HasMaxLength(100);
+            entity.Property(e => e.Description).HasColumnType("text"); // PostgreSQL text type
+
+            // Configure one-to-many relationship
+            entity.HasOne(n => n.Category)
+                .WithMany(c => c.Items)
+                .HasForeignKey(n => n.CategoryId)
+                .OnDelete(DeleteBehavior.SetNull); // When category deleted, set CategoryId to NULL
         });
 
         // Configure Role entity
@@ -74,6 +110,35 @@ public class AppDbContext : DbContext
                   .WithMany(r => r.UserRoles)
                   .HasForeignKey(ur => ur.RoleId);
         });
+
+        // Seed default categories
+        SeedData(modelBuilder);
     }
 
+    /// <summary>
+    /// Seeds the database with default categories
+    /// </summary>
+    private static void SeedData(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Category>().HasData(
+            new Category
+                { Id = 1, Name = "Electronics", ColorHex = "#4CAF50", Description = "Electronics items like laptops, tablets, smartphones, etc." },
+            new Category
+                { Id = 2, Name = "Books", ColorHex = "#2196F3", Description = "Books like novels, textbooks, etc." },
+            new Category
+            {
+                Id = 3, Name = "Furniture", ColorHex = "#FF9800", Description = "Furniture items like sofas, chairs, beds, tables, etc."
+            },
+            new Category
+                { Id = 4, Name = "Home", ColorHex = "#E91E63", Description = "Home items like appliances, decor, household items, etc." },
+            new Category
+                { Id = 5, Name = "Garden", ColorHex = "#E91E63", Description = "Garden items like gardening tools, lawnmowers, etc." },
+            new Category
+                { Id = 6, Name = "Tools", ColorHex = "#E91E63", Description = "Tools like hammers, screwdrivers, Drills etc." },
+            new Category
+                { Id = 7, Name = "Automotive", ColorHex = "#E91E63", Description = "Automotive items like cars, motorcycles, car parts, etc." },
+            new Category
+                { Id = 8, Name = "Other", ColorHex = "#E91E63", Description = "Other items not categorized" }
+        );
+    }
 }

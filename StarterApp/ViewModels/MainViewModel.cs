@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using StarterApp.Database.Models;
 using StarterApp.Services;
+using StarterApp.Views;
 
 namespace StarterApp.ViewModels;
 
@@ -121,6 +122,27 @@ public partial class MainViewModel : BaseViewModel
         }
         
         await _navigationService.NavigateToAsync("UserListPage");
+    }
+
+    /// @brief Navigates to create item (registered route only — same as MainPage, not a duplicate Shell tab).
+    [RelayCommand]
+    private async Task NavigateToCreateItemAsync()
+    {
+        try
+        {
+            await _navigationService.NavigateToAsync(nameof(CreateItemPage));
+        }
+        catch (Exception ex)
+        {
+            SetError($"Could not open Create Item: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine(ex);
+        }
+    }
+
+    [RelayCommand]
+    private async Task NavigateToItemsListAsync()
+    {
+        await _navigationService.NavigateToAsync(nameof(ItemsPage));
     }
 
     /// @brief Refreshes the dashboard data

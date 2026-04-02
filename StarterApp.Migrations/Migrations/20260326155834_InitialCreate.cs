@@ -4,7 +4,9 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace StarterApp.Database.Migrations
+#pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
+
+namespace StarterApp.Migrations.Migrations
 {
     /// <inheritdoc />
     public partial class InitialCreate : Migration
@@ -12,6 +14,21 @@ namespace StarterApp.Database.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.CreateTable(
+                name: "categories",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Name = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    ColorHex = table.Column<string>(type: "character varying(7)", maxLength: 7, nullable: false),
+                    Description = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_categories", x => x.Id);
+                });
+
             migrationBuilder.CreateTable(
                 name: "role",
                 columns: table => new
@@ -49,6 +66,34 @@ namespace StarterApp.Database.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Items",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Title = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Description = table.Column<string>(type: "text", nullable: false),
+                    DailyRate = table.Column<int>(type: "integer", nullable: false),
+                    CategoryId = table.Column<int>(type: "integer", nullable: true),
+                    OwnerId = table.Column<int>(type: "integer", nullable: true),
+                    OwnerName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    IsAvailable = table.Column<bool>(type: "boolean", nullable: false),
+                    AverageRating = table.Column<int>(type: "integer", nullable: true),
+                    ImageUrl = table.Column<int>(type: "integer", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Items", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Items_categories_CategoryId",
+                        column: x => x.CategoryId,
+                        principalTable: "categories",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "user_role",
                 columns: table => new
                 {
@@ -78,6 +123,37 @@ namespace StarterApp.Database.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            migrationBuilder.InsertData(
+                table: "categories",
+                columns: new[] { "Id", "ColorHex", "Description", "Name" },
+                values: new object[,]
+                {
+                    { 1, "#4CAF50", "Electronics items like laptops, tablets, smartphones, etc.", "Electronics" },
+                    { 2, "#2196F3", "Books like novels, textbooks, etc.", "Books" },
+                    { 3, "#FF9800", "Furniture items like sofas, chairs, beds, tables, etc.", "Furniture" },
+                    { 4, "#E91E63", "Home items like appliances, decor, household items, etc.", "Home" },
+                    { 5, "#E91E63", "Garden items like gardening tools, lawnmowers, etc.", "Garden" },
+                    { 6, "#E91E63", "Tools like hammers, screwdrivers, Drills etc.", "Tools" },
+                    { 7, "#E91E63", "Automotive items like cars, motorcycles, car parts, etc.", "Automotive" },
+                    { 8, "#E91E63", "Other items not categorized", "Other" }
+                });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_categories_Name",
+                table: "categories",
+                column: "Name",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Items_CategoryId",
+                table: "Items",
+                column: "CategoryId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Items_CreatedAt",
+                table: "Items",
+                column: "CreatedAt");
+
             migrationBuilder.CreateIndex(
                 name: "IX_role_Name",
                 table: "role",
@@ -106,7 +182,13 @@ namespace StarterApp.Database.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
+                name: "Items");
+
+            migrationBuilder.DropTable(
                 name: "user_role");
+
+            migrationBuilder.DropTable(
+                name: "categories");
 
             migrationBuilder.DropTable(
                 name: "role");

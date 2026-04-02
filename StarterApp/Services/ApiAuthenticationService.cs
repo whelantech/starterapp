@@ -7,6 +7,7 @@ namespace StarterApp.Services;
 public class ApiAuthenticationService : IAuthenticationService
 {
     private readonly HttpClient _httpClient;
+    private readonly AuthTokenStoreService _tokenStore;
     private User? _currentUser;
     private readonly List<string> _currentUserRoles = new();
 
@@ -16,9 +17,44 @@ public class ApiAuthenticationService : IAuthenticationService
     public User? CurrentUser => _currentUser;
     public List<string> CurrentUserRoles => _currentUserRoles;
 
-    public ApiAuthenticationService(HttpClient httpClient)
+    public ApiAuthenticationService(HttpClient httpClient, AuthTokenStoreService tokenStore)
     {
         _httpClient = httpClient;
+        _tokenStore = tokenStore;
+    }
+
+    public async Task InitializeAsync()
+    {
+        var token = await _tokenStore.GetTokenAsync();
+        var expiry = await _tokenStore.GetExpiryAsync();
+
+        if (string.IsNullOrEmpty(token) || expiry is null || expiry <= DateTime.UtcNow)
+            return;
+
+        _httpClient.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", token);
+
+        var meResponse = await _httpClient.GetAsync("users/me");
+
+        if (!meResponse.IsSuccessStatusCode)
+        {
+            await LogoutAsync();
+            return;
+        }
+
+        var profile = await meResponse.Content.ReadFromJsonAsync<UserProfileResponse>();
+
+        _currentUser = new User
+        {
+            Id = profile!.Id,
+            Email = profile.Email,
+            FirstName = profile.FirstName,
+            LastName = profile.LastName,
+            CreatedAt = profile.CreatedAt,
+            IsActive = true
+        };
+
+        AuthenticationStateChanged?.Invoke(this, true);
     }
 
     public async Task<AuthenticationResult> LoginAsync(string email, string password)
@@ -34,8 +70,11 @@ public class ApiAuthenticationService : IAuthenticationService
             }
 
             var token = await response.Content.ReadFromJsonAsync<TokenResponse>();
+            
+            await _tokenStore.SaveTokenAsync(token!.Token, token.ExpiresAt);
+
             _httpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", token!.Token);
+                new AuthenticationHeaderValue("Bearer", token.Token);
 
             var meResponse = await _httpClient.GetAsync("users/me");
             var profile = await meResponse.Content.ReadFromJsonAsync<UserProfileResponse>();
@@ -89,7 +128,8 @@ public class ApiAuthenticationService : IAuthenticationService
     {
         _currentUser = null;
         _currentUserRoles.Clear();
-        _httpClient.DefaultRequestHeaders.Authorization = null;
+        _httpClient.DefaultRequestHeaders.Authorization = null; 
+        _tokenStore.Clear();
         AuthenticationStateChanged?.Invoke(this, false);
         return Task.CompletedTask;
     }
