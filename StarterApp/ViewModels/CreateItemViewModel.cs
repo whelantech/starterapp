@@ -1,9 +1,8 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using StarterApp.Database.Data;
 using StarterApp.Database.Models;
+using StarterApp.Database.Repositories;
 using StarterApp.Services;
-using Microsoft.EntityFrameworkCore;
 
 namespace StarterApp.ViewModels;
 
@@ -12,64 +11,29 @@ namespace StarterApp.ViewModels;
 /// </summary>
 public partial class CreateItemViewModel : BaseViewModel
 {
-    private readonly AppDbContext _context;
+    private readonly IItemRepository _repository; // ✅ Interface, not DbContext
     private readonly IAuthenticationService _authService;
-    private int? _ItemId;  // Null for new Item, populated for existing Item
+    private int? _itemId;
 
-    /// <summary>
-    /// Item title (page title uses <see cref="BaseViewModel.Title"/>)
-    /// </summary>
-    [ObservableProperty]
-    private string itemTitle = string.Empty;
+    [ObservableProperty] private string itemTitle = string.Empty;
 
-    /// <summary>
-    /// Item Description
-    /// </summary>
-    [ObservableProperty]
-    private string description = string.Empty;
+    [ObservableProperty] private string description = string.Empty;
 
-    /// <summary>
-    /// Item Daily Rate
-    /// </summary>
-    [ObservableProperty]
-    private int dailyRate;
+    [ObservableProperty] private int dailyRate;
 
-    /// <summary>
-    /// All categories for picker
-    /// </summary>
-    [ObservableProperty]
-    private List<Category> categories = new();
+    [ObservableProperty] private List<Category> categories = new();
 
-    /// <summary>
-    /// Selected category (nullable)
-    /// </summary>
-    [ObservableProperty]
-    private Category? selectedCategory;
+    [ObservableProperty] private Category? selectedCategory;
 
-    // Owners picker — not implemented yet (use current user as owner later)
+    [ObservableProperty] private bool isAvailable = true;
 
-    /// <summary>
-    /// Is the Item Available for rent?
-    /// </summary>
-    [ObservableProperty]
-    private bool isAvailable = true;
+    [ObservableProperty] private string imageUrl = string.Empty;
 
-    /// <summary>
-    /// Item Image
-    /// TODO: Implement image upload
-    /// </summary>
-    [ObservableProperty]
-    private string imageUrl = string.Empty;
+    [ObservableProperty] private bool isEditMode;
 
-    /// <summary>
-    /// Whether we're editing an existing Item (vs creating new)
-    /// </summary>
-    [ObservableProperty]
-    private bool isEditMode;
-
-    public CreateItemViewModel(AppDbContext context, IAuthenticationService authService)
+    public CreateItemViewModel(IItemRepository repository, IAuthenticationService authService)
     {
-        _context = context;
+        _repository = repository;
         _authService = authService;
         Title = "Create Item";
     }
@@ -77,39 +41,37 @@ public partial class CreateItemViewModel : BaseViewModel
     /// <summary>
     /// Load categories and optionally load an existing Item
     /// </summary>
-    /// <param name="ItemID">If provided, loads existing Item for editing</param>
-    public async Task InitializeAsync(int? ItemID = null)
+    public async Task InitializeAsync(int? itemId = null)
     {
         try
         {
             IsBusy = true;
+            ClearError();
 
-            // Load all categories for picker
-            Categories = await _context.Categories.OrderBy(c => c.Name).ToListAsync();
+            // ✅ Uses repository (no EF Core here)
+            Categories = await _repository.GetAllCategoriesAsync();
 
-            if (ItemID.HasValue)
+            if (itemId.HasValue)
             {
-                // Edit mode: Load existing Item
-                _ItemId = ItemID.Value;
+                _itemId = itemId.Value;
                 IsEditMode = true;
                 Title = "Edit Item";
 
-                var Item = await _context.Items.FindAsync(ItemID.Value);
-                if (Item != null)
+                var item = await _repository.GetItemByIdAsync(itemId.Value);
+
+                if (item != null)
                 {
-                    ItemTitle = Item.Title;
-                    Description = Item.Description;
-                    DailyRate = Item.DailyRate;
-                    IsAvailable = Item.IsAvailable;
-                    SelectedCategory = Categories.FirstOrDefault(c => c.Id == Item.CategoryId);
+                    ItemTitle = item.Title;
+                    Description = item.Description;
+                    DailyRate = item.DailyRate;
+                    IsAvailable = item.IsAvailable;
+                    SelectedCategory = Categories.FirstOrDefault(c => c.Id == item.CategoryId);
                 }
             }
             else
             {
-                // Create mode
                 IsEditMode = false;
                 Title = "New Item";
-                ItemTitle = string.Empty;
             }
         }
         catch (Exception ex)
@@ -123,46 +85,45 @@ public partial class CreateItemViewModel : BaseViewModel
     }
 
     /// <summary>
-    /// Save Item (create new or update existing)
+    /// Save Item (create or update)
     /// </summary>
     [RelayCommand]
     private async Task SaveAsync()
     {
         if (string.IsNullOrWhiteSpace(ItemTitle))
         {
-            SetError("Title is required");
+            ErrorMessage = "Title is required";
             return;
         }
 
         if (string.IsNullOrWhiteSpace(Description))
         {
-            SetError("Description is required");
+            ErrorMessage = "Description is required";
             return;
         }
 
         try
         {
             IsBusy = true;
-            ClearError();
+            ErrorMessage = string.Empty;
 
-            if (IsEditMode && _ItemId.HasValue)
+            if (IsEditMode && _itemId.HasValue)
             {
-                // Update existing Item
-                var Item = await _context.Items.FindAsync(_ItemId.Value);
-                if (Item != null)
+                var item = new Item
                 {
-                    Item.Title = ItemTitle;
-                    Item.Description = Description;
-                    Item.DailyRate = DailyRate;
-                    Item.CategoryId = SelectedCategory?.Id;
-                    Item.IsAvailable = IsAvailable;
-                }
+                    Id = _itemId.Value,
+                    Title = ItemTitle,
+                    Description = Description,
+                    DailyRate = DailyRate,
+                    CategoryId = SelectedCategory?.Id,
+                    IsAvailable = IsAvailable
+                };
+
+                await _repository.UpdateItemAsync(item);
             }
             else
             {
-                // Create new Item
-                var now = DateTime.UtcNow;
-                var Item = new Item
+                var item = new Item
                 {
                     Title = ItemTitle,
                     Description = Description,
@@ -170,20 +131,17 @@ public partial class CreateItemViewModel : BaseViewModel
                     CategoryId = SelectedCategory?.Id,
                     IsAvailable = IsAvailable,
                     OwnerId = _authService.CurrentUser?.Id,
-                    OwnerName = $"{_authService.CurrentUser?.FirstName} {_authService.CurrentUser?.LastName}".Trim(),
-                    CreatedAt = DateTime.UtcNow
+                    OwnerName = $"{_authService.CurrentUser?.FirstName} {_authService.CurrentUser?.LastName}".Trim()
                 };
-                _context.Items.Add(Item);
+
+                await _repository.CreateItemAsync(item);
             }
 
-            await _context.SaveChangesAsync();
-
-            // Navigate back to list
             await Shell.Current.GoToAsync("..");
         }
         catch (Exception ex)
         {
-            SetError($"Failed to save: {ex.Message}");
+            ErrorMessage = $"Failed to save: {ex.Message}";
         }
         finally
         {
@@ -197,12 +155,12 @@ public partial class CreateItemViewModel : BaseViewModel
     [RelayCommand]
     private async Task DeleteAsync()
     {
-        if (!IsEditMode || !_ItemId.HasValue)
+        if (!IsEditMode || !_itemId.HasValue)
             return;
 
         bool confirm = await Application.Current.MainPage.DisplayAlert(
             "Delete Item",
-            "Are you sure you want to delete this Item?",
+            "Are you sure you want to delete this item?",
             "Delete",
             "Cancel");
 
@@ -213,19 +171,20 @@ public partial class CreateItemViewModel : BaseViewModel
         {
             IsBusy = true;
 
-            var Item = await _context.Items.FindAsync(_ItemId.Value);
-            if (Item != null)
-            {
-                _context.Items.Remove(Item);
-                await _context.SaveChangesAsync();
-            }
+            var deleted = await _repository.DeleteItemAsync(_itemId.Value);
 
-            // Navigate back to list
-            await Shell.Current.GoToAsync("..");
+            if (deleted)
+            {
+                await Shell.Current.GoToAsync("..");
+            }
+            else
+            {
+                ErrorMessage = "Item not found";
+            }
         }
         catch (Exception ex)
         {
-            SetError($"Failed to delete: {ex.Message}");
+            ErrorMessage = $"Failed to delete: {ex.Message}";
         }
         finally
         {
@@ -233,9 +192,6 @@ public partial class CreateItemViewModel : BaseViewModel
         }
     }
 
-    /// <summary>
-    /// Cancel editing and go back
-    /// </summary>
     [RelayCommand]
     private async Task CancelAsync()
     {

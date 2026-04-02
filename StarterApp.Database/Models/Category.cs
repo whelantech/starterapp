@@ -37,6 +37,12 @@ public class Category
     public string? Description { get; set; }
 
     /// <summary>
+    /// API category slug for GET /items?category=… (not stored locally).
+    /// </summary>
+    [NotMapped]
+    public string? Slug { get; set; }
+
+    /// <summary>
     /// Navigation property: All items in this category
     /// </summary>
     public List<Item> Items { get; set; } = new List<Item>();

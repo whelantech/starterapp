@@ -4,9 +4,9 @@ namespace StarterApp.Views;
 
 public partial class ItemsPage : ContentPage
 {
-    private readonly ItemsListViewModel _viewModel;
+    private readonly ItemListViewModel _viewModel;
 
-    public ItemsPage(ItemsListViewModel viewModel)
+    public ItemsPage(ItemListViewModel viewModel)
     {
         InitializeComponent();
         _viewModel = viewModel; 

@@ -7,10 +7,6 @@
              xmlns:models="clr-namespace:StarterApp.Database.Models;assembly=StarterApp.Database"
              Title="{Binding Title}">
 
-    <ContentPage.BindingContext>
-        <vm:ItemsListViewModel />
-    </ContentPage.BindingContext>
-
     <ContentPage.ToolbarItems>
         <!-- Add button in toolbar -->
         <ToolbarItem Text="Add"
@@ -31,7 +27,7 @@
             </Border.StrokeShape>
             <Picker ItemsSource="{Binding Categories}"
                     ItemDisplayBinding="{Binding Name}"
-                    SelectedItem="{Binding SelectedCategoryId}"
+                    SelectedItem="{Binding SelectedCategory}"
                     Title="Filter by category"
                     Margin="10" />
         </Border>
@@ -88,7 +84,7 @@
 
                                 <Border.GestureRecognizers>
                                     <TapGestureRecognizer
-                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ItemsListViewModel}}, Path=EditItemCommand}"
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ItemListViewModel}}, Path=EditItemCommand}"
                                         CommandParameter="{Binding .}" />
                                 </Border.GestureRecognizers>
 
@@ -119,15 +115,14 @@
 
                                     <!-- Content preview -->
                                     <Label Grid.Row="2"
-                                           Text="{Binding ContentPreview}"
+                                           Text="{Binding DescriptionPreview}"
                                            FontSize="14"
                                            TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray400}}"
                                            LineBreakMode="TailTruncation"
                                            MaxLines="2" />
 
-                                    <!-- Updated date -->
                                     <Label Grid.Row="3"
-                                           Text="{Binding UpdatedAt, StringFormat='Updated {0:MMM dd, yyyy}'}"
+                                           Text="{Binding CreatedAt, StringFormat='Listed {0:MMM dd, yyyy}'}"
                                            FontSize="12"
                                            TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray500}}"
                                            Margin="0,5,0,0" />
