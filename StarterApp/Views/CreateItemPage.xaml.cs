@@ -2,7 +2,11 @@ using StarterApp.ViewModels;
 
 namespace StarterApp.Views;
 
-public partial class CreateItemPage : ContentPage
+/// <summary>
+/// Uses <see cref="IQueryAttributable"/> so <c>?id=</c> is applied reliably on Android/iOS
+/// (Shell often does not expose the query string on <see cref="Shell.CurrentState"/>).
+/// </summary>
+public partial class CreateItemPage : ContentPage, IQueryAttributable
 {
     private readonly CreateItemViewModel _viewModel;
 
@@ -13,44 +17,18 @@ public partial class CreateItemPage : ContentPage
         BindingContext = _viewModel;
     }
 
-    protected override async void OnAppearing()
+    public void ApplyQueryAttributes(IDictionary<string, object> query)
     {
-        base.OnAppearing();
-
-        try
+        if (query.TryGetValue("id", out var idObj)
+            && idObj is not null
+            && int.TryParse(Convert.ToString(idObj), out var id)
+            && id > 0)
         {
-            // Get query parameter from Shell navigation
-            var uri = Shell.Current?.CurrentState?.Location?.OriginalString;
-
-            int? itemId = null;
-
-            if (!string.IsNullOrEmpty(uri) && uri.Contains("id="))
-            {
-                var query = uri.Split('?').LastOrDefault();
-
-                if (!string.IsNullOrEmpty(query))
-                {
-                    var pairs = query.Split('&');
-
-                    foreach (var pair in pairs)
-                    {
-                        var kv = pair.Split('=');
-
-                        if (kv.Length == 2 && kv[0] == "id" && int.TryParse(kv[1], out int id))
-                        {
-                            itemId = id;
-                            break;
-                        }
-                    }
-                }
-            }
-
-            await _viewModel.InitializeAsync(itemId);
+            _ = _viewModel.InitializeAsync(id);
         }
-        catch (Exception ex)
+        else
         {
-            System.Diagnostics.Debug.WriteLine($"CreateItemPage.OnAppearing: {ex}");
-            await DisplayAlertAsync("Create Item", $"Could not load: {ex.Message}", "OK");
+            _ = _viewModel.InitializeAsync(null);
         }
     }
 }

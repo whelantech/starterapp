@@ -3,7 +3,6 @@
 <ContentPage x:Class="StarterApp.Views.ItemsPage"
              xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:vm="clr-namespace:StarterApp.ViewModels"
              xmlns:models="clr-namespace:StarterApp.Database.Models;assembly=StarterApp.Database"
              Title="{Binding Title}">
 
@@ -67,7 +66,7 @@
                                 <SwipeItems>
                                     <SwipeItem Text="Delete"
                                                BackgroundColor="#F44336"
-                                               Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ItemListViewModel}}, Path=DeleteItemCommand}"
+                                               Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.DeleteItemCommand}"
                                                CommandParameter="{Binding .}" />
                                 </SwipeItems>
                             </SwipeView.RightItems>
@@ -84,7 +83,7 @@
 
                                 <Border.GestureRecognizers>
                                     <TapGestureRecognizer
-                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ItemListViewModel}}, Path=EditItemCommand}"
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.OpenItemDetailCommand}"
                                         CommandParameter="{Binding .}" />
                                 </Border.GestureRecognizers>
 

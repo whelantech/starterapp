@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage x:Class="StarterApp.Views.ItemDetailsPage"
+             xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             Title="{Binding Title}">
+
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Edit"
+                     Command="{Binding EditCommand}" />
+    </ContentPage.ToolbarItems>
+
+    <Grid>
+        <ScrollView IsVisible="{Binding Item, Converter={StaticResource IsNotNullConverter}}">
+            <VerticalStackLayout Padding="20" Spacing="16">
+
+                <Border BackgroundColor="{Binding CategoryBadgeColor}"
+                        Padding="10,6"
+                        HorizontalOptions="Start"
+                        IsVisible="{Binding HasCategory}">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="6" />
+                    </Border.StrokeShape>
+                    <Label Text="{Binding CategoryName}"
+                           TextColor="White"
+                           FontSize="13"
+                           FontAttributes="Bold" />
+                </Border>
+
+                <Label Text="{Binding Item.Title}"
+                       FontSize="24"
+                       FontAttributes="Bold"
+                       LineBreakMode="WordWrap" />
+
+                <Label Text="{Binding Item.Description}"
+                       FontSize="16"
+                       LineBreakMode="WordWrap"
+                       TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource Gray100}}" />
+
+                <BoxView HeightRequest="1"
+                         Color="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}" />
+
+                <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="12" ColumnSpacing="12">
+                    <Label Grid.Row="0" Grid.Column="0" Text="Daily rate" FontAttributes="Bold" FontSize="13"
+                           TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray400}}" />
+                    <Label Grid.Row="0" Grid.Column="1"
+                           HorizontalOptions="End"
+                           FontSize="16"
+                           Text="{Binding Item.DailyRate, StringFormat='£{0}/day'}" />
+
+                    <Label Grid.Row="1" Grid.Column="0" Text="Availability" FontAttributes="Bold" FontSize="13"
+                           TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray400}}" />
+                    <Label Grid.Row="1" Grid.Column="1"
+                           HorizontalOptions="End"
+                           Text="{Binding AvailabilityDisplay}"
+                           FontSize="16" />
+
+                    <Label Grid.Row="2" Grid.Column="0" Text="Listed" FontAttributes="Bold" FontSize="13"
+                           TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray400}}" />
+                    <Label Grid.Row="2" Grid.Column="1"
+                           HorizontalOptions="End"
+                           Text="{Binding Item.CreatedAt, StringFormat='{0:dd MMM yyyy}'}"
+                           FontSize="16" />
+
+                    <Label Grid.Row="3" Grid.Column="0" Text="Owner" FontAttributes="Bold" FontSize="13"
+                           TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray400}}" />
+                    <Label Grid.Row="3" Grid.Column="1"
+                           HorizontalOptions="End"
+                           Text="{Binding Item.OwnerName}"
+                           FontSize="16"
+                           LineBreakMode="TailTruncation" />
+                </Grid>
+
+                <VerticalStackLayout Spacing="4"
+                                     IsVisible="{Binding AverageRatingDisplay, Converter={StaticResource StringToBoolConverter}}">
+                    <Label Text="Average rating" FontAttributes="Bold" FontSize="13"
+                           TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray400}}" />
+                    <Label Text="{Binding AverageRatingDisplay}"
+                           FontSize="16" />
+                </VerticalStackLayout>
+
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <Border Padding="16"
+                IsVisible="{Binding HasError}"
+                BackgroundColor="{AppThemeBinding Light=#FFEBEE, Dark=#1B0000}"
+                Stroke="{AppThemeBinding Light=#F44336, Dark=#EF5350}"
+                StrokeThickness="1"
+                VerticalOptions="Center"
+                Margin="20">
+            <Border.StrokeShape>
+                <RoundRectangle CornerRadius="8" />
+            </Border.StrokeShape>
+            <Label Text="{Binding ErrorMessage}"
+                   TextColor="{AppThemeBinding Light=#D32F2F, Dark=#EF5350}" />
+        </Border>
+
+        <ActivityIndicator IsVisible="{Binding IsBusy}"
+                           IsRunning="{Binding IsBusy}"
+                           VerticalOptions="Center"
+                           HorizontalOptions="Center"
+                           Color="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+    </Grid>
+</ContentPage>

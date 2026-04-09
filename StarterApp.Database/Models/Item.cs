@@ -79,6 +79,18 @@ public class Item
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     /// <summary>
+    /// Last known latitude from API (not stored in local PostgreSQL schema).
+    /// </summary>
+    [NotMapped]
+    public double? Latitude { get; set; }
+
+    /// <summary>
+    /// Last known longitude from API (not stored in local PostgreSQL schema).
+    /// </summary>
+    [NotMapped]
+    public double? Longitude { get; set; }
+
+    /// <summary>
     /// Computed property: Preview of Description for list views
     /// </summary>
     [NotMapped]

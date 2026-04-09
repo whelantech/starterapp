@@ -39,7 +39,8 @@ public static class MauiProgram
         else
         {
             builder.Services.AddSingleton<IAuthenticationService, AuthenticationService>();
-            builder.Services.AddSingleton<IItemRepository, ItemRepository>();
+            // Transient: each page gets its own repository + DbContext scope pair (avoids concurrent EF on one context).
+            builder.Services.AddTransient<IItemRepository, ItemRepository>();
         }
 
         builder.Services.AddDbContext<AppDbContext>();
@@ -72,8 +73,10 @@ public static class MauiProgram
         builder.Services.AddTransient<TempPage>();
         builder.Services.AddTransient<CreateItemViewModel>();
         builder.Services.AddTransient<CreateItemPage>();
-        builder.Services.AddTransient<ItemListViewModel>();
+        builder.Services.AddTransient<ItemsListViewModel>();
         builder.Services.AddTransient<ItemsPage>();
+        builder.Services.AddTransient<ItemDetailViewModel>();
+        builder.Services.AddTransient<ItemDetailsPage>();
 
 #if DEBUG
         builder.Logging.AddDebug();

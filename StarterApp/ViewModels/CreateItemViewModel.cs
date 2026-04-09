@@ -1,3 +1,4 @@
+using System.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using StarterApp.Database.Models;
@@ -11,9 +12,21 @@ namespace StarterApp.ViewModels;
 /// </summary>
 public partial class CreateItemViewModel : BaseViewModel
 {
-    private readonly IItemRepository _repository; // ✅ Interface, not DbContext
+    private readonly IItemRepository _repository;
     private readonly IAuthenticationService _authService;
+
+    /// <summary>
+    /// Prevents overlapping InitializeAsync calls (Shell can fire ApplyQueryAttributes and OnAppearing
+    /// so close together that two EF operations run on the same DbContext).
+    /// </summary>
+    private readonly SemaphoreSlim _initLock = new(1, 1);
+
     private int? _itemId;
+
+    /// <summary>Coordinates from API when editing (PUT must send lat/long).</summary>
+    private double? _latitude;
+
+    private double? _longitude;
 
     [ObservableProperty] private string itemTitle = string.Empty;
 
@@ -43,6 +56,7 @@ public partial class CreateItemViewModel : BaseViewModel
     /// </summary>
     public async Task InitializeAsync(int? itemId = null)
     {
+        await _initLock.WaitAsync();
         try
         {
             IsBusy = true;
@@ -61,15 +75,27 @@ public partial class CreateItemViewModel : BaseViewModel
 
                 if (item != null)
                 {
+                    var currentUserId = _authService.CurrentUser?.Id;
+                    if (currentUserId is null || item.OwnerId != currentUserId)
+                    {
+                        await Shell.Current.GoToAsync("..");
+                        return;
+                    }
+
                     ItemTitle = item.Title;
                     Description = item.Description;
                     DailyRate = item.DailyRate;
                     IsAvailable = item.IsAvailable;
                     SelectedCategory = Categories.FirstOrDefault(c => c.Id == item.CategoryId);
+                    _latitude = item.Latitude;
+                    _longitude = item.Longitude;
                 }
             }
             else
             {
+                _itemId = null;
+                _latitude = null;
+                _longitude = null;
                 IsEditMode = false;
                 Title = "New Item";
             }
@@ -81,6 +107,7 @@ public partial class CreateItemViewModel : BaseViewModel
         finally
         {
             IsBusy = false;
+            _initLock.Release();
         }
     }
 
@@ -102,6 +129,12 @@ public partial class CreateItemViewModel : BaseViewModel
             return;
         }
 
+        if (SelectedCategory is null || SelectedCategory.Id <= 0)
+        {
+            ErrorMessage = "Please select a category";
+            return;
+        }
+
         try
         {
             IsBusy = true;
@@ -115,8 +148,10 @@ public partial class CreateItemViewModel : BaseViewModel
                     Title = ItemTitle,
                     Description = Description,
                     DailyRate = DailyRate,
-                    CategoryId = SelectedCategory?.Id,
-                    IsAvailable = IsAvailable
+                    CategoryId = SelectedCategory.Id,
+                    IsAvailable = IsAvailable,
+                    Latitude = _latitude,
+                    Longitude = _longitude
                 };
 
                 await _repository.UpdateItemAsync(item);
@@ -128,7 +163,7 @@ public partial class CreateItemViewModel : BaseViewModel
                     Title = ItemTitle,
                     Description = Description,
                     DailyRate = DailyRate,
-                    CategoryId = SelectedCategory?.Id,
+                    CategoryId = SelectedCategory.Id,
                     IsAvailable = IsAvailable,
                     OwnerId = _authService.CurrentUser?.Id,
                     OwnerName = $"{_authService.CurrentUser?.FirstName} {_authService.CurrentUser?.LastName}".Trim()

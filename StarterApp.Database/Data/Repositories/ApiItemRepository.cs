@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -83,7 +84,19 @@ public class ApiItemRepository : IItemRepository
     /// <inheritdoc />
     public async Task<Item?> GetItemByIdAsync(int id)
     {
-        throw new NotImplementedException("API integration pending");
+        using var response = await _httpClient.GetAsync($"{ItemsEndpoint}/{id}");
+        if (response.StatusCode == HttpStatusCode.NotFound)
+            return null;
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var err = await response.Content.ReadFromJsonAsync<ApiErrorBody>(JsonOptions);
+            var msg = err?.Message ?? err?.Error ?? response.ReasonPhrase ?? "Request failed";
+            throw new InvalidOperationException(msg);
+        }
+
+        var dto = await response.Content.ReadFromJsonAsync<ItemDetailApiDto>(JsonOptions);
+        return dto is null ? null : MapDetailToItem(dto);
     }
 
     /// <inheritdoc />
@@ -127,7 +140,44 @@ public class ApiItemRepository : IItemRepository
     /// <inheritdoc />
     public async Task<Item?> UpdateItemAsync(Item item)
     {
-        throw new NotImplementedException("API integration pending");
+        if (string.IsNullOrWhiteSpace(item.Title))
+            throw new ArgumentException("Title is required.", nameof(item));
+
+        if (item.CategoryId is null or <= 0)
+            throw new ArgumentException("A valid category is required.", nameof(item));
+
+        if (item.DailyRate <= 0)
+            throw new ArgumentException("Daily rate must be greater than 0.", nameof(item));
+
+        var lat = item.Latitude ?? PlaceholderLatitude;
+        var lon = item.Longitude ?? PlaceholderLongitude;
+
+        var requestBody = new
+        {
+            title = item.Title.Trim(),
+            description = string.IsNullOrWhiteSpace(item.Description) ? null : item.Description.Trim(),
+            dailyRate = (decimal)item.DailyRate,
+            categoryId = item.CategoryId.Value,
+            latitude = lat,
+            longitude = lon,
+            isAvailable = item.IsAvailable
+        };
+
+        using var response =
+            await _httpClient.PutAsJsonAsync($"{ItemsEndpoint}/{item.Id}", requestBody, JsonOptions);
+
+        if (response.StatusCode == HttpStatusCode.NotFound)
+            return null;
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var err = await response.Content.ReadFromJsonAsync<ApiErrorBody>(JsonOptions);
+            var msg = err?.Message ?? err?.Error ?? response.ReasonPhrase ?? "Request failed";
+            throw new InvalidOperationException(msg);
+        }
+
+        var updated = await response.Content.ReadFromJsonAsync<ItemDetailApiDto>(JsonOptions);
+        return updated is null ? null : MapDetailToItem(updated);
     }
 
     /// <inheritdoc />
@@ -175,6 +225,30 @@ public class ApiItemRepository : IItemRepository
     public async Task<bool> DeleteCategoryAsync(int id)
     {
         throw new NotImplementedException("API integration pending");
+    }
+
+    private static Item MapDetailToItem(ItemDetailApiDto dto)
+    {
+        return new Item
+        {
+            Id = dto.Id,
+            Title = dto.Title,
+            Description = dto.Description ?? string.Empty,
+            DailyRate = (int)Math.Round(dto.DailyRate, MidpointRounding.AwayFromZero),
+            CategoryId = dto.CategoryId,
+            Category = string.IsNullOrEmpty(dto.CategoryName)
+                ? null
+                : new Category { Id = dto.CategoryId, Name = dto.CategoryName, ColorHex = "#808080" },
+            OwnerId = dto.OwnerId,
+            OwnerName = dto.OwnerName ?? string.Empty,
+            IsAvailable = dto.IsAvailable,
+            AverageRating = dto.AverageRating is null
+                ? null
+                : (int)Math.Round(dto.AverageRating.Value, MidpointRounding.AwayFromZero),
+            CreatedAt = dto.CreatedAt,
+            Latitude = dto.Latitude,
+            Longitude = dto.Longitude
+        };
     }
 
     private static Item MapListItemToItem(ItemListApiDto dto)
@@ -230,6 +304,23 @@ public class ApiItemRepository : IItemRepository
         int Page,
         int PageSize,
         int TotalPages);
+
+    private sealed record ItemDetailApiDto(
+        int Id,
+        string Title,
+        string? Description,
+        decimal DailyRate,
+        int CategoryId,
+        [property: JsonPropertyName("category")] string? CategoryName,
+        int OwnerId,
+        string? OwnerName,
+        double? OwnerRating,
+        double Latitude,
+        double Longitude,
+        bool IsAvailable,
+        double? AverageRating,
+        int? TotalReviews,
+        DateTime CreatedAt);
 
     private sealed record ItemListApiDto(
         int Id,

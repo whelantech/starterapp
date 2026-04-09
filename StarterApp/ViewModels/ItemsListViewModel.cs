@@ -1,39 +1,44 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using StarterApp.Database.Data;
 using StarterApp.Database.Models;
-using StarterApp.Database.Repositories;
 using StarterApp.Views;
+using Microsoft.EntityFrameworkCore;
 using System.Collections.ObjectModel;
 
 namespace StarterApp.ViewModels;
 
 /// <summary>
-/// ViewModel for displaying list of all items
+/// ViewModel for displaying list of all items in the marketplace
 /// </summary>
-public partial class ItemListViewModel : BaseViewModel
+public partial class ItemsListViewModel : BaseViewModel
 {
-    private readonly IItemRepository _repository;
+    private readonly AppDbContext _context;
 
-    /// <summary>Skips reload when <see cref="SelectedCategory"/> is set programmatically during category load.</summary>
-    private bool _suppressCategoryChanged;
-
+    /// <summary>
+    /// Observable collection of items (auto-updates UI when changed)
+    /// </summary>
     [ObservableProperty] private ObservableCollection<Item> items = new();
 
+    /// <summary>
+    /// All categories for filter picker
+    /// </summary>
     [ObservableProperty] private List<Category> categories = new();
 
-    /// <summary>Includes synthetic "All categories" row (Id 0).</summary>
-    [ObservableProperty] private Category? selectedCategory;
+    /// <summary>
+    /// Currently selected category filter (null = show all)
+    /// </summary>
+    [ObservableProperty] private int? selectedCategoryId;
 
+    /// <summary>
+    /// Whether we're refreshing the list
+    /// </summary>
     [ObservableProperty] private bool isRefreshing;
 
-    [ObservableProperty] private int totalItems;
-
-    [ObservableProperty] private int totalPages = 1;
-
-    public ItemListViewModel(IItemRepository repository)
+    public ItemsListViewModel(AppDbContext context)
     {
-        _repository = repository;
-        Title = "Items";
+        _context = context;
+        Title = "Marketplace Items";
     }
 
     /// <summary>
@@ -45,37 +50,30 @@ public partial class ItemListViewModel : BaseViewModel
         await LoadItemsAsync();
     }
 
-
     /// <summary>
-    /// Load all categories for filter picker
+    /// Load all categories
     /// </summary>
     private async Task LoadCategoriesAsync()
     {
         try
         {
-            _suppressCategoryChanged = true;
-            var allCategories = await _repository.GetAllCategoriesAsync();
+            var allCategories = await _context.Categories.OrderBy(c => c.Name).ToListAsync();
 
+            // Add "All" option at the beginning
             Categories = new List<Category>
             {
-                new Category { Id = 0, Name = "All categories", ColorHex = "#808080" }
+                new Category { Id = 0, Name = "All Categories", ColorHex = "#808080" }
             };
-
             Categories.AddRange(allCategories);
-            SelectedCategory = Categories[0];
         }
         catch (Exception ex)
         {
             SetError($"Failed to load categories: {ex.Message}");
         }
-        finally
-        {
-            _suppressCategoryChanged = false;
-        }
     }
 
     /// <summary>
-    /// Load items (filtered by category when a specific category is selected)
+    /// Load items (filtered by category if selected)
     /// </summary>
     [RelayCommand]
     private async Task LoadItemsAsync()
@@ -83,28 +81,28 @@ public partial class ItemListViewModel : BaseViewModel
         try
         {
             IsBusy = true;
-            ErrorMessage = string.Empty;
+            ClearError();
 
-            int? categoryId = SelectedCategory is { Id: > 0 } ? SelectedCategory.Id : null;
+            IQueryable<Item> query = _context.Items.Include(i => i.Category);
 
-            var result = await _repository.GetAllItemsAsync(
-                categoryId,
-                search: null,
-                page: 1,
-                pageSize: 100);
+            // Apply category filter if selected
+            if (SelectedCategoryId.HasValue && SelectedCategoryId.Value > 0)
+            {
+                query = query.Where(i => i.CategoryId == SelectedCategoryId.Value);
+            }
 
-            TotalItems = result.TotalItems;
-            TotalPages = Math.Max(1, result.TotalPages);
+            // Order by most recent first
+            var itemsList = await query.OrderByDescending(i => i.CreatedAt).ToListAsync();
 
             Items.Clear();
-            foreach (var item in result.Items)
+            foreach (var item in itemsList)
             {
                 Items.Add(item);
             }
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Failed to load items: {ex.Message}";
+            SetError($"Failed to load items: {ex.Message}");
         }
         finally
         {
@@ -119,17 +117,28 @@ public partial class ItemListViewModel : BaseViewModel
     [RelayCommand]
     private async Task AddItemAsync()
     {
-        await Shell.Current.GoToAsync(nameof(CreateItemPage));
+        await Shell.Current.GoToAsync("item");
+    }
+
+    /// <summary>
+    /// Navigate to read-only item details.
+    /// </summary>
+    [RelayCommand]
+    private async Task OpenItemDetailAsync(Item? item)
+    {
+        if (item == null) return;
+        await Shell.Current.GoToAsync($"{nameof(ItemDetailsPage)}?id={item.Id}");
     }
 
     /// <summary>
     /// Navigate to edit existing item
     /// </summary>
+    /// <param name="item">The item to edit</param>
     [RelayCommand]
     private async Task EditItemAsync(Item item)
     {
         if (item == null) return;
-        await Shell.Current.GoToAsync($"{nameof(CreateItemPage)}?id={item.Id}");
+        await Shell.Current.GoToAsync($"item?id={item.Id}");
     }
 
     /// <summary>
@@ -151,21 +160,13 @@ public partial class ItemListViewModel : BaseViewModel
         try
         {
             IsBusy = true;
-
-            var deleted = await _repository.DeleteItemAsync(item.Id);
-
-            if (deleted)
-            {
-                Items.Remove(item);
-            }
-            else
-            {
-                ErrorMessage = "Item not found";
-            }
+            _context.Items.Remove(item);
+            await _context.SaveChangesAsync();
+            Items.Remove(item);
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Failed to delete item: {ex.Message}";
+            SetError($"Failed to delete item: {ex.Message}");
         }
         finally
         {
@@ -183,11 +184,12 @@ public partial class ItemListViewModel : BaseViewModel
         await LoadItemsAsync();
     }
 
-    partial void OnSelectedCategoryChanged(Category? value)
+    /// <summary>
+    /// Called when category filter changes
+    /// </summary>
+    partial void OnSelectedCategoryIdChanged(int? value)
     {
-        if (_suppressCategoryChanged || value is null || Categories.Count == 0)
-            return;
-
+        // Automatically reload items when category filter changes
         _ = LoadItemsAsync();
     }
 }

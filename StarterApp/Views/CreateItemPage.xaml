@@ -35,7 +35,7 @@
             </Border>
 
             <!-- Category Picker -->
-            <Label Text="Category (Optional)" FontAttributes="Bold" />
+            <Label Text="Category" FontAttributes="Bold" />
             <Border Stroke="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}"
                     StrokeThickness="1"
                     BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Gray900}}">
