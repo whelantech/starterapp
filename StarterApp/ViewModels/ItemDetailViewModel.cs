@@ -23,6 +23,11 @@ public partial class ItemDetailViewModel : BaseViewModel
     /// <summary>True when the signed-in user is the listing owner (edit is allowed).</summary>
     [ObservableProperty] private bool canEdit;
 
+    /// <summary>Pull-to-refresh on the details page (reload from API/DB).</summary>
+    [ObservableProperty] private bool isRefreshing;
+
+    private int? _currentItemId;
+
     public string AvailabilityDisplay =>
         Item?.IsAvailable == true ? "Available" : "Not available";
 
@@ -50,6 +55,7 @@ public partial class ItemDetailViewModel : BaseViewModel
     {
         if (string.IsNullOrWhiteSpace(rawId) || !int.TryParse(rawId.Trim(), out var id) || id <= 0)
         {
+            _currentItemId = null;
             Item = null;
             CanEdit = false;
             SetError("Invalid item id.");
@@ -62,11 +68,14 @@ public partial class ItemDetailViewModel : BaseViewModel
     /// <summary>
     /// Load item by id from the repository (local DB or API).
     /// </summary>
-    public async Task LoadAsync(int itemId)
+    /// <param name="isRefresh">When true, skip the full-screen busy overlay (pull-to-refresh only).</param>
+    public async Task LoadAsync(int itemId, bool isRefresh = false)
     {
+        _currentItemId = itemId;
         try
         {
-            IsBusy = true;
+            if (!isRefresh)
+                IsBusy = true;
             ClearError();
 
             var loaded = await _repository.GetItemByIdAsync(itemId);
@@ -90,7 +99,32 @@ public partial class ItemDetailViewModel : BaseViewModel
         }
         finally
         {
-            IsBusy = false;
+            if (!isRefresh)
+                IsBusy = false;
+        }
+    }
+
+    /// <summary>
+    /// Reload the current item (e.g. after editing on another page).
+    /// </summary>
+    [RelayCommand]
+    private async Task RefreshAsync()
+    {
+        if (!_currentItemId.HasValue || _currentItemId.Value <= 0)
+        {
+            IsRefreshing = false;
+            return;
+        }
+
+        var id = _currentItemId.Value;
+        try
+        {
+            IsRefreshing = true;
+            await LoadAsync(id, isRefresh: true);
+        }
+        finally
+        {
+            IsRefreshing = false;
         }
     }
 

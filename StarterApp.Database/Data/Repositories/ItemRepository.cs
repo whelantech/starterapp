@@ -58,6 +58,7 @@ public class ItemRepository : IItemRepository
         try
         {
             return await _context.Items
+                .AsNoTracking()
                 .Include(i => i.Category)
                 .FirstOrDefaultAsync(i => i.Id == id);
         }

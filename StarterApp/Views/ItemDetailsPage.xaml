@@ -10,8 +10,10 @@
     </ContentPage.ToolbarItems>
 
     <Grid>
-        <ScrollView IsVisible="{Binding Item, Converter={StaticResource IsNotNullConverter}}">
-            <VerticalStackLayout Padding="20" Spacing="16">
+        <RefreshView IsRefreshing="{Binding IsRefreshing}"
+                     Command="{Binding RefreshCommand}">
+            <ScrollView IsVisible="{Binding Item, Converter={StaticResource IsNotNullConverter}}">
+                <VerticalStackLayout Padding="20" Spacing="16">
 
                 <Border BackgroundColor="{Binding CategoryBadgeColor}"
                         Padding="10,6"
@@ -78,8 +80,9 @@
                            FontSize="16" />
                 </VerticalStackLayout>
 
-            </VerticalStackLayout>
-        </ScrollView>
+                </VerticalStackLayout>
+            </ScrollView>
+        </RefreshView>
 
         <Border Padding="16"
                 IsVisible="{Binding HasError}"
