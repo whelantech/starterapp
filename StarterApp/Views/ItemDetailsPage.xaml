@@ -80,6 +80,11 @@
                            FontSize="16" />
                 </VerticalStackLayout>
 
+                <Button Text="Rent this item"
+                        Command="{Binding RentCommand}"
+                        IsVisible="{Binding CanRent}"
+                        SemanticProperties.Description="Request to rent this item" />
+
                 </VerticalStackLayout>
             </ScrollView>
         </RefreshView>

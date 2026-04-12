@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="StarterApp.Views.RentalListsPage"
+             Title="{Binding Title}">
+
+    <!-- Tap a row to open rental details (approve/reject for owners is on the detail page). -->
+    <Grid RowDefinitions="Auto,*" Padding="0,8,0,0">
+        <Picker Grid.Row="0"
+                Title="Show"
+                SelectedIndex="{Binding ScopeIndex, Mode=TwoWay}"
+                Margin="16,0">
+            <Picker.Items>
+                <x:String>Outgoing</x:String>
+                <x:String>Incoming</x:String>
+            </Picker.Items>
+        </Picker>
+
+        <RefreshView Grid.Row="1"
+                     Command="{Binding LoadCommand}">
+            <Grid>
+                <CollectionView x:Name="RentalsCollection"
+                                ItemsSource="{Binding Rentals}"
+                                Margin="8,0"
+                                SelectionMode="Single"
+                                SelectedItem="{Binding SelectedRental, Mode=TwoWay}"
+                                SelectionChanged="RentalsCollection_SelectionChanged">
+                    <CollectionView.EmptyView>
+                        <Label Text="No rentals yet."
+                               HorizontalOptions="Center"
+                               VerticalOptions="Center"
+                               Margin="24"
+                               TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray400}}" />
+                    </CollectionView.EmptyView>
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate>
+                            <Border Padding="12"
+                                    Margin="0,4"
+                                    Stroke="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}"
+                                    StrokeThickness="1">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="8" />
+                                </Border.StrokeShape>
+                                <VerticalStackLayout Spacing="4">
+                                    <Label Text="{Binding ItemTitle}"
+                                           FontAttributes="Bold"
+                                           FontSize="16"
+                                           LineBreakMode="TailTruncation" />
+                                    <HorizontalStackLayout Spacing="4">
+                                        <Label FontSize="13"
+                                               TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray400}}"
+                                               Text="{Binding StartDate, StringFormat='{0:yyyy-MM-dd}'}" />
+                                        <Label FontSize="13"
+                                               TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray400}}"
+                                               Text="→" />
+                                        <Label FontSize="13"
+                                               TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray400}}"
+                                               Text="{Binding EndDate, StringFormat='{0:yyyy-MM-dd}'}" />
+                                    </HorizontalStackLayout>
+                                    <HorizontalStackLayout Spacing="12">
+                                        <Label Text="{Binding Status}"
+                                               FontSize="13" />
+                                        <Label Text="{Binding TotalPrice, StringFormat='£{0}'}"
+                                               FontAttributes="Bold"
+                                               FontSize="14"
+                                               HorizontalOptions="EndAndExpand" />
+                                    </HorizontalStackLayout>
+                                </VerticalStackLayout>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+
+                <ActivityIndicator IsVisible="{Binding IsBusy}"
+                                   IsRunning="{Binding IsBusy}"
+                                   VerticalOptions="Center"
+                                   HorizontalOptions="Center" />
+            </Grid>
+        </RefreshView>
+    </Grid>
+</ContentPage>

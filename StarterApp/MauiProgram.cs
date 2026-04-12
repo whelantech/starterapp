@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using StarterApp.ViewModels;
 using StarterApp.Database.Data;
@@ -20,7 +22,9 @@ public static class MauiProgram
 // not change regardless of which implementation is registered here.
 // -------------------------------------------------------------------
         // Not `const` so the local-DB branch stays reachable for the compiler when toggling.
-        var useSharedApi = false;
+        // true = items + rentals + auth go to the hosted API (no local Rentals table; register/login against the API).
+        // false = local PostgreSQL (run migrations; emulator uses 10.0.2.2 in appsettings).
+        var useSharedApi = true;
         const string ApiBaseUrl = "https://set09102-api.b-davison.workers.dev/";
 
         if (useSharedApi)
@@ -33,6 +37,7 @@ public static class MauiProgram
                 return client;
             });
             builder.Services.AddSingleton<IItemRepository, ApiItemRepository>();
+            builder.Services.AddSingleton<IRentalRepository, ApiRentalRepository>();
             builder.Services.AddSingleton<AuthTokenStoreService>();
             builder.Services.AddSingleton<IAuthenticationService, ApiAuthenticationService>();
         }
@@ -41,7 +46,10 @@ public static class MauiProgram
             builder.Services.AddSingleton<IAuthenticationService, AuthenticationService>();
             // Transient: each page gets its own repository + DbContext scope pair (avoids concurrent EF on one context).
             builder.Services.AddTransient<IItemRepository, ItemRepository>();
+            builder.Services.AddTransient<IRentalRepository, RentalRepository>();
         }
+
+        builder.Services.AddSingleton<IRentalService, RentalService>();
 
         builder.Services.AddDbContext<AppDbContext>();
 
@@ -77,11 +85,33 @@ public static class MauiProgram
         builder.Services.AddTransient<ItemsPage>();
         builder.Services.AddTransient<ItemDetailViewModel>();
         builder.Services.AddTransient<ItemDetailsPage>();
+        builder.Services.AddTransient<RentalRequestViewModel>();
+        builder.Services.AddTransient<RentalRequestPage>();
+        builder.Services.AddTransient<RentalListsViewModel>();
+        builder.Services.AddTransient<RentalListsPage>();
+        builder.Services.AddTransient<RentalDetailViewModel>();
+        builder.Services.AddTransient<RentalDetailPage>();
 
 #if DEBUG
         builder.Logging.AddDebug();
 #endif
 
-        return builder.Build();
+        var app = builder.Build();
+
+        // Apply pending EF migrations (e.g. RepairRentalsTableIfMissing) against local PostgreSQL on launch.
+        if (!useSharedApi)
+        {
+            try
+            {
+                using var scope = app.Services.CreateScope();
+                scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.Migrate();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Database.Migrate failed: {ex.Message}");
+            }
+        }
+
+        return app;
     }
 }

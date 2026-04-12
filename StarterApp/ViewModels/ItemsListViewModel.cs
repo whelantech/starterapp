@@ -1,19 +1,18 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using StarterApp.Database.Data;
 using StarterApp.Database.Models;
+using StarterApp.Database.Repositories;
 using StarterApp.Views;
-using Microsoft.EntityFrameworkCore;
 using System.Collections.ObjectModel;
 
 namespace StarterApp.ViewModels;
 
 /// <summary>
-/// ViewModel for displaying list of all items in the marketplace
+/// ViewModel for displaying items — uses <see cref="IItemRepository"/> so the same UI works with local PostgreSQL or the shared REST API.
 /// </summary>
 public partial class ItemsListViewModel : BaseViewModel
 {
-    private readonly AppDbContext _context;
+    private readonly IItemRepository _repository;
 
     /// <summary>
     /// Observable collection of items (auto-updates UI when changed)
@@ -35,9 +34,9 @@ public partial class ItemsListViewModel : BaseViewModel
     /// </summary>
     [ObservableProperty] private bool isRefreshing;
 
-    public ItemsListViewModel(AppDbContext context)
+    public ItemsListViewModel(IItemRepository repository)
     {
-        _context = context;
+        _repository = repository;
         Title = "Marketplace Items";
     }
 
@@ -57,14 +56,13 @@ public partial class ItemsListViewModel : BaseViewModel
     {
         try
         {
-            var allCategories = await _context.Categories.OrderBy(c => c.Name).ToListAsync();
+            var allCategories = await _repository.GetAllCategoriesAsync();
 
-            // Add "All" option at the beginning
             Categories = new List<Category>
             {
                 new Category { Id = 0, Name = "All Categories", ColorHex = "#808080" }
             };
-            Categories.AddRange(allCategories);
+            Categories.AddRange(allCategories.OrderBy(c => c.Name));
         }
         catch (Exception ex)
         {
@@ -83,19 +81,15 @@ public partial class ItemsListViewModel : BaseViewModel
             IsBusy = true;
             ClearError();
 
-            IQueryable<Item> query = _context.Items.Include(i => i.Category);
-
-            // Apply category filter if selected
-            if (SelectedCategoryId.HasValue && SelectedCategoryId.Value > 0)
-            {
-                query = query.Where(i => i.CategoryId == SelectedCategoryId.Value);
-            }
-
-            // Order by most recent first
-            var itemsList = await query.OrderByDescending(i => i.CreatedAt).ToListAsync();
+            int? categoryFilter = SelectedCategoryId is > 0 ? SelectedCategoryId : null;
+            var result = await _repository.GetAllItemsAsync(
+                categoryId: categoryFilter,
+                search: null,
+                page: 1,
+                pageSize: 100);
 
             Items.Clear();
-            foreach (var item in itemsList)
+            foreach (var item in result.Items)
             {
                 Items.Add(item);
             }
@@ -133,7 +127,6 @@ public partial class ItemsListViewModel : BaseViewModel
     /// <summary>
     /// Navigate to edit existing item
     /// </summary>
-    /// <param name="item">The item to edit</param>
     [RelayCommand]
     private async Task EditItemAsync(Item item)
     {
@@ -149,7 +142,10 @@ public partial class ItemsListViewModel : BaseViewModel
     {
         if (item == null) return;
 
-        bool confirm = await Application.Current.MainPage.DisplayAlert(
+        var mainPage = Application.Current?.MainPage;
+        if (mainPage is null) return;
+
+        bool confirm = await mainPage.DisplayAlert(
             "Delete Item",
             $"Are you sure you want to delete '{item.Title}'?",
             "Delete",
@@ -160,9 +156,15 @@ public partial class ItemsListViewModel : BaseViewModel
         try
         {
             IsBusy = true;
-            _context.Items.Remove(item);
-            await _context.SaveChangesAsync();
-            Items.Remove(item);
+            var ok = await _repository.DeleteItemAsync(item.Id);
+            if (ok)
+                Items.Remove(item);
+            else
+                SetError("Could not delete item.");
+        }
+        catch (NotImplementedException)
+        {
+            SetError("Delete is not available when using the shared API.");
         }
         catch (Exception ex)
         {
@@ -189,7 +191,6 @@ public partial class ItemsListViewModel : BaseViewModel
     /// </summary>
     partial void OnSelectedCategoryIdChanged(int? value)
     {
-        // Automatically reload items when category filter changes
         _ = LoadItemsAsync();
     }
 }

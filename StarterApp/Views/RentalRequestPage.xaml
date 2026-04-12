@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage x:Class="StarterApp.Views.RentalRequestPage"
+             xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             Title="{Binding Title}">
+
+    <Grid>
+        <ScrollView>
+            <VerticalStackLayout Padding="20" Spacing="14">
+
+                <Border BackgroundColor="{AppThemeBinding Light=#FFEBEE, Dark=#1B0000}"
+                        Stroke="{AppThemeBinding Light=#F44336, Dark=#EF5350}"
+                        StrokeThickness="1"
+                        Padding="15"
+                        IsVisible="{Binding HasError}">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="8" />
+                    </Border.StrokeShape>
+                    <Label Text="{Binding ErrorMessage}"
+                           TextColor="{AppThemeBinding Light=#D32F2F, Dark=#EF5350}"
+                           FontSize="14" />
+                </Border>
+
+                <Label Text="{Binding ItemTitle}"
+                       FontSize="20"
+                       FontAttributes="Bold"
+                       LineBreakMode="WordWrap" />
+
+                <Label Text="Your name" FontAttributes="Bold" FontSize="13"
+                       TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray400}}" />
+                <Label Text="{Binding BorrowerDisplayName}" FontSize="16" />
+
+                <Label Text="Your email" FontAttributes="Bold" FontSize="13"
+                       TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray400}}" />
+                <Label Text="{Binding BorrowerEmail}" FontSize="16" />
+
+                <Label Text="Date from" FontAttributes="Bold" />
+                <DatePicker Date="{Binding StartDate, Mode=TwoWay}"
+                            MinimumDate="{Binding MinimumStartDate}"
+                            Format="dd MMM yyyy" />
+
+                <Label Text="Date to" FontAttributes="Bold" />
+                <DatePicker Date="{Binding EndDate, Mode=TwoWay}"
+                            MinimumDate="{Binding StartDate}"
+                            Format="dd MMM yyyy" />
+
+                <Label Text="Price (estimated)" FontAttributes="Bold" FontSize="13"
+                       TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray400}}" />
+                <Label Text="{Binding TotalPriceFormatted}"
+                       FontSize="18"
+                       FontAttributes="Bold" />
+
+                <Label Text="Daily rate" FontAttributes="Bold" FontSize="13"
+                       TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray400}}" />
+                <Label Text="{Binding DailyRate, StringFormat='£{0}/day'}" FontSize="15" />
+
+                <Label Text="Comments" FontAttributes="Bold" />
+                <Editor Text="{Binding Comments}"
+                        Placeholder="Optional notes"
+                        AutoSize="TextChanges"
+                        MinimumHeightRequest="80" />
+                <Label Text="Comments are stored only when using the local database."
+                       FontSize="12"
+                       TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray400}}"
+                       IsVisible="{Binding ShowCommentsPersistHint}" />
+
+                <HorizontalStackLayout Spacing="12" Margin="0,8,0,0">
+                    <Button Text="Cancel"
+                            Command="{Binding CancelCommand}"
+                            HorizontalOptions="Fill"
+                            SemanticProperties.Description="Cancel rental request" />
+                    <Button Text="Submit"
+                            Command="{Binding SubmitCommand}"
+                            HorizontalOptions="Fill"
+                            SemanticProperties.Description="Submit rental request" />
+                </HorizontalStackLayout>
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <ActivityIndicator IsVisible="{Binding IsBusy}"
+                           IsRunning="{Binding IsBusy}"
+                           VerticalOptions="Center"
+                           HorizontalOptions="Center"
+                           Color="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+    </Grid>
+</ContentPage>

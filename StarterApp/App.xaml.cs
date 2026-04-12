@@ -22,6 +22,9 @@ public partial class App : Application
 		Routing.RegisterRoute(nameof(Views.CreateItemPage), typeof(Views.CreateItemPage));
 		Routing.RegisterRoute(nameof(Views.ItemsPage), typeof(Views.ItemsPage));
 		Routing.RegisterRoute(nameof(Views.ItemDetailsPage), typeof(Views.ItemDetailsPage));
+		Routing.RegisterRoute(nameof(Views.RentalRequestPage), typeof(Views.RentalRequestPage));
+		Routing.RegisterRoute(nameof(Views.RentalListsPage), typeof(Views.RentalListsPage));
+		Routing.RegisterRoute(nameof(Views.RentalDetailPage), typeof(Views.RentalDetailPage));
 	}
 
 	private async Task RestoreStoredAuthAsync()

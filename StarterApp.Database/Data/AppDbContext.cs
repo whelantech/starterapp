@@ -41,6 +41,7 @@ public class AppDbContext : DbContext
     public DbSet<UserRole> UserRoles { get; set; }
     public DbSet<Category> Categories { get; set; }
     public DbSet<Item> Items { get; set; }
+    public DbSet<Rental> Rentals { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -109,6 +110,26 @@ public class AppDbContext : DbContext
             entity.HasOne(ur => ur.Role)
                   .WithMany(r => r.UserRoles)
                   .HasForeignKey(ur => ur.RoleId);
+        });
+
+        modelBuilder.Entity<Rental>(entity =>
+        {
+            entity.HasIndex(e => e.ItemId);
+            entity.HasIndex(e => e.BorrowerUserId);
+            entity.HasIndex(e => new { e.ItemId, e.Status });
+
+            entity.Property(e => e.Status).HasMaxLength(50);
+            entity.Property(e => e.Comments).HasMaxLength(2000);
+
+            entity.HasOne(r => r.Item)
+                .WithMany()
+                .HasForeignKey(r => r.ItemId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(r => r.Borrower)
+                .WithMany()
+                .HasForeignKey(r => r.BorrowerUserId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Seed default categories

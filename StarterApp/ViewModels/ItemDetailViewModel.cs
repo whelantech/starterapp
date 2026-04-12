@@ -14,6 +14,8 @@ public partial class ItemDetailViewModel : BaseViewModel
 {
     private readonly IItemRepository _repository;
     private readonly IAuthenticationService _authService;
+    private readonly IRentalService _rentalService;
+    private readonly INavigationService _navigationService;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(AvailabilityDisplay))]
@@ -22,6 +24,9 @@ public partial class ItemDetailViewModel : BaseViewModel
 
     /// <summary>True when the signed-in user is the listing owner (edit is allowed).</summary>
     [ObservableProperty] private bool canEdit;
+
+    /// <summary>Show Rent when the user may request a rental (not owner, available, signed in).</summary>
+    [ObservableProperty] private bool canRent;
 
     /// <summary>Pull-to-refresh on the details page (reload from API/DB).</summary>
     [ObservableProperty] private bool isRefreshing;
@@ -41,10 +46,16 @@ public partial class ItemDetailViewModel : BaseViewModel
 
     public string? CategoryName => Item?.Category?.Name;
 
-    public ItemDetailViewModel(IItemRepository repository, IAuthenticationService authService)
+    public ItemDetailViewModel(
+        IItemRepository repository,
+        IAuthenticationService authService,
+        IRentalService rentalService,
+        INavigationService navigationService)
     {
         _repository = repository;
         _authService = authService;
+        _rentalService = rentalService;
+        _navigationService = navigationService;
         Title = "Item details";
     }
 
@@ -58,6 +69,7 @@ public partial class ItemDetailViewModel : BaseViewModel
             _currentItemId = null;
             Item = null;
             CanEdit = false;
+            CanRent = false;
             SetError("Invalid item id.");
             return Task.CompletedTask;
         }
@@ -83,6 +95,7 @@ public partial class ItemDetailViewModel : BaseViewModel
             {
                 Item = null;
                 CanEdit = false;
+                CanRent = false;
                 SetError("Item not found.");
                 return;
             }
@@ -90,11 +103,13 @@ public partial class ItemDetailViewModel : BaseViewModel
             Item = loaded;
             Title = loaded.Title;
             CanEdit = IsCurrentUserOwner(loaded);
+            UpdateCanRent(loaded);
         }
         catch (Exception ex)
         {
             Item = null;
             CanEdit = false;
+            CanRent = false;
             SetError($"Could not load item: {ex.Message}");
         }
         finally
@@ -137,17 +152,28 @@ public partial class ItemDetailViewModel : BaseViewModel
         return loaded.OwnerId.Value == userId.Value;
     }
 
+    private void UpdateCanRent(Item loaded)
+    {
+        CanRent = _rentalService.CanOfferRent(loaded, _authService.CurrentUser?.Id);
+    }
+
     partial void OnItemChanged(Item? value)
     {
         OnPropertyChanged(nameof(HasCategory));
         OnPropertyChanged(nameof(CategoryBadgeColor));
         OnPropertyChanged(nameof(CategoryName));
         EditCommand.NotifyCanExecuteChanged();
+        RentCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnCanEditChanged(bool value)
     {
         EditCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnCanRentChanged(bool value)
+    {
+        RentCommand.NotifyCanExecuteChanged();
     }
 
     private bool CanExecuteEdit() => Item is not null && CanEdit;
@@ -159,5 +185,16 @@ public partial class ItemDetailViewModel : BaseViewModel
             return;
 
         await Shell.Current.GoToAsync($"{nameof(CreateItemPage)}?id={Item.Id}");
+    }
+
+    private bool CanExecuteRent() => Item is not null && CanRent;
+
+    [RelayCommand(CanExecute = nameof(CanExecuteRent))]
+    private async Task RentAsync()
+    {
+        if (Item == null || !CanRent)
+            return;
+
+        await _navigationService.NavigateToAsync($"{nameof(RentalRequestPage)}?itemId={Item.Id}");
     }
 }
