@@ -24,6 +24,10 @@ public class ApiItemRepository : IItemRepository
 
     private const double PlaceholderLongitude = -3.1883;
 
+
+    /// <summary>
+    /// JSON options for the API response
+    /// </summary>
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,

@@ -126,7 +126,7 @@
                     
 
                     <!-- Settings Card -->
-                    <Border BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Gray900}}"
+                    <!-- <Border BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Gray900}}"
                             Stroke="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray700}}"
                             StrokeThickness="1"
                             Padding="20"
@@ -156,7 +156,7 @@
                                    VerticalOptions="Center"
                                    TextColor="{AppThemeBinding Light={StaticResource Gray400}, Dark={StaticResource Gray600}}" />
                         </Grid>
-                    </Border>
+                    </Border> -->
 
                     <!-- Create Item Card -->
                     <Border
@@ -184,6 +184,11 @@
                                        FontSize="12"
                                        TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray400}}" />
                             </StackLayout>
+                             <Label Grid.Column="2"
+                                   Text=">"
+                                   FontSize="18"
+                                   VerticalOptions="Center"
+                                   TextColor="{AppThemeBinding Light={StaticResource Gray400}, Dark={StaticResource Gray600}}" />
                         </Grid>
                     </Border>
 
@@ -213,6 +218,11 @@
                                        FontSize="12"
                                        TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray400}}" />
                             </StackLayout>
+                             <Label Grid.Column="2"
+                                   Text=">"
+                                   FontSize="18"
+                                   VerticalOptions="Center"
+                                   TextColor="{AppThemeBinding Light={StaticResource Gray400}, Dark={StaticResource Gray600}}" />
                         </Grid>
                     </Border>
 

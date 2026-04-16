@@ -33,7 +33,7 @@ public class Item
     /// Daily Rate for the item
     /// </summary>
     [Required]
-    public int DailyRate { get; set; } = 0;
+    public decimal DailyRate { get; set; } = 0;
 
     /// <summary>
     /// Foreign key to Category
@@ -71,7 +71,7 @@ public class Item
     /// <summary>
     /// The URL of the image of the item
     /// </summary>
-    public int? ImageUrl { get; set; }
+    public string? ImageUrl { get; set; }
 
     /// <summary>
     /// When the item was created
