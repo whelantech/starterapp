@@ -14,7 +14,8 @@ public partial class LoginPage : ContentPage
     {
         base.OnAppearing();
         EmailEntry.Focus();
-        EmailEntry.Text = "admin@company.com";
-        PasswordEntry.Text = "Admin123!";
+        // Test Credentials whilst I get the Auth working
+        EmailEntry.Text = "test@test.com";
+        PasswordEntry.Text = "Password1!";
     }
 }

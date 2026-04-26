@@ -4,9 +4,22 @@ namespace StarterApp.Views;
 
 public partial class UserDetailPage : ContentPage
 {
-    public UserDetailPage(UserDetailViewModel viewModel)
+    private readonly UserListViewModel _viewModel;
+
+    public UserDetailPage(UserListViewModel viewModel)
     {
         InitializeComponent();
         BindingContext = viewModel;
+        _viewModel = viewModel;
+    }
+
+    protected override async void OnAppearing()
+    {
+        base.OnAppearing();
+
+        if (_viewModel.CurrentUser == null)
+        {
+            await _viewModel.LoadUserCommand.ExecuteAsync(null);
+        }
     }
 }

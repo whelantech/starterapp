@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using StarterApp.ViewModels;
 using StarterApp.Database.Data;
+using StarterApp.Database.Models;
 using StarterApp.Views;
 using StarterApp.Database.Repositories;
 using StarterApp.Services;
@@ -38,6 +39,7 @@ public static class MauiProgram
             });
             builder.Services.AddSingleton<IItemRepository, ApiItemRepository>();
             builder.Services.AddSingleton<IRentalRepository, ApiRentalRepository>();
+            builder.Services.AddSingleton<ApiUserRepository>();
             builder.Services.AddSingleton<AuthTokenStoreService>();
             builder.Services.AddSingleton<IAuthenticationService, ApiAuthenticationService>();
         }
@@ -45,7 +47,13 @@ public static class MauiProgram
         {
             builder.Services.AddSingleton<IAuthenticationService, AuthenticationService>();
             // Transient: each page gets its own repository + DbContext scope pair (avoids concurrent EF on one context).
-            builder.Services.AddTransient<IItemRepository, ItemRepository>();
+            builder.Services.AddTransient(typeof(IRepository<,>), typeof(EfRepository<,>));
+            // Same AppDbContext instance for ItemRepository and its composed IRepository<Category,int>.
+            builder.Services.AddTransient<IItemRepository>(sp =>
+            {
+                var ctx = sp.GetRequiredService<AppDbContext>();
+                return new ItemRepository(ctx, new EfRepository<Category, int>(ctx));
+            });
             builder.Services.AddTransient<IRentalRepository, RentalRepository>();
         }
 
@@ -66,7 +74,6 @@ public static class MauiProgram
         builder.Services.AddSingleton<AppShellViewModel>();
         builder.Services.AddSingleton<AppShell>();
         builder.Services.AddSingleton<App>();
-
         builder.Services.AddTransient<MainViewModel>();
         builder.Services.AddTransient<MainPage>();
         builder.Services.AddSingleton<LoginViewModel>();
@@ -77,8 +84,8 @@ public static class MauiProgram
         builder.Services.AddTransient<UserListPage>();
         builder.Services.AddTransient<UserDetailPage>();
         builder.Services.AddTransient<UserDetailViewModel>();
-        builder.Services.AddSingleton<TempViewModel>();
-        builder.Services.AddTransient<TempPage>();
+        // builder.Services.AddSingleton<TempViewModel>();
+        // builder.Services.AddTransient<TempPage>();
         builder.Services.AddTransient<CreateItemViewModel>();
         builder.Services.AddTransient<CreateItemPage>();
         builder.Services.AddTransient<ItemsListViewModel>();

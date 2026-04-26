@@ -30,7 +30,7 @@
                         <Label Grid.Row="0" Grid.Column="1"
                                HorizontalOptions="End"
                                FontSize="16"
-                               Text="{Binding Rental.Status}" />
+                               Text="{Binding StatusDisplayText}" />
 
                         <Label Grid.Row="1" Grid.Column="0" Text="Renter" FontAttributes="Bold" FontSize="13"
                                TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray400}}" />
@@ -90,6 +90,14 @@
                                     Command="{Binding RejectCommand}"
                                     HorizontalOptions="FillAndExpand" />
                         </HorizontalStackLayout>
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="8" IsVisible="{Binding ShowBorrowerCancel}">
+                        <Label Text="This is your request — you can cancel it while it is still pending"
+                               FontSize="12"
+                               TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray400}}" />
+                        <Button Text="Cancel request"
+                                Command="{Binding CancelAsBorrowerCommand}" />
                     </VerticalStackLayout>
 
                 </VerticalStackLayout>

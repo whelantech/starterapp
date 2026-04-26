@@ -13,6 +13,7 @@ namespace StarterApp.ViewModels;
 public partial class ItemsListViewModel : BaseViewModel
 {
     private readonly IItemRepository _repository;
+    private bool _assigningCategoriesFromService;
 
     /// <summary>
     /// Observable collection of items (auto-updates UI when changed)
@@ -25,9 +26,9 @@ public partial class ItemsListViewModel : BaseViewModel
     [ObservableProperty] private List<Category> categories = new();
 
     /// <summary>
-    /// Currently selected category filter (null = show all)
+    /// Picker selection (Id 0 = all categories). Must match the category filter on the items list page.
     /// </summary>
-    [ObservableProperty] private int? selectedCategoryId;
+    [ObservableProperty] private Category? selectedCategory;
 
     /// <summary>
     /// Whether we're refreshing the list
@@ -56,6 +57,7 @@ public partial class ItemsListViewModel : BaseViewModel
     {
         try
         {
+            _assigningCategoriesFromService = true;
             var allCategories = await _repository.GetAllCategoriesAsync();
 
             Categories = new List<Category>
@@ -63,10 +65,15 @@ public partial class ItemsListViewModel : BaseViewModel
                 new Category { Id = 0, Name = "All Categories", ColorHex = "#808080" }
             };
             Categories.AddRange(allCategories.OrderBy(c => c.Name));
+            SelectedCategory = Categories[0];
         }
         catch (Exception ex)
         {
             SetError($"Failed to load categories: {ex.Message}");
+        }
+        finally
+        {
+            _assigningCategoriesFromService = false;
         }
     }
 
@@ -81,7 +88,7 @@ public partial class ItemsListViewModel : BaseViewModel
             IsBusy = true;
             ClearError();
 
-            int? categoryFilter = SelectedCategoryId is > 0 ? SelectedCategoryId : null;
+            int? categoryFilter = SelectedCategory is { Id: > 0 } c ? c.Id : null;
             var result = await _repository.GetAllItemsAsync(
                 categoryId: categoryFilter,
                 search: null,
@@ -187,10 +194,12 @@ public partial class ItemsListViewModel : BaseViewModel
     }
 
     /// <summary>
-    /// Called when category filter changes
+    /// Called when the user changes the category filter (not when we assign after loading the list from the API).
     /// </summary>
-    partial void OnSelectedCategoryIdChanged(int? value)
+    partial void OnSelectedCategoryChanged(Category? value)
     {
+        if (_assigningCategoriesFromService)
+            return;
         _ = LoadItemsAsync();
     }
 }

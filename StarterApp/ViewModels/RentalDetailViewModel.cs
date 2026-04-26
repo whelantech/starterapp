@@ -1,5 +1,7 @@
+using System;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using StarterApp.Converters;
 using StarterApp.Database.Models;
 using StarterApp.Database.Repositories;
 using StarterApp.Services;
@@ -33,6 +35,10 @@ public partial class RentalDetailViewModel : BaseViewModel
             ? string.Empty
             : $"{Rental.StartDate:yyyy-MM-dd} → {Rental.EndDate:yyyy-MM-dd}";
 
+    public string StatusDisplayText => Rental is null
+        ? string.Empty
+        : RentalStatusDisplayConverter.FormatForDisplay(Rental.Status);
+
     public string? RequestedAtDisplay
     {
         get
@@ -48,6 +54,11 @@ public partial class RentalDetailViewModel : BaseViewModel
         Rental is not null
         && IsPendingLike(Rental.Status)
         && _authService.CurrentUser?.Id == Rental.OwnerId;
+
+    public bool ShowBorrowerCancel =>
+        Rental is not null
+        && _authService.CurrentUser?.Id == Rental.BorrowerUserId
+        && IsPendingLike(Rental.Status);
 
     public RentalDetailViewModel(
         IRentalRepository rentalRepository,
@@ -142,18 +153,36 @@ public partial class RentalDetailViewModel : BaseViewModel
     [RelayCommand]
     private async Task ApproveAsync()
     {
-        await UpdateStatusAsync("approved");
+        await UpdateStatusIfAllowedAsync(
+            () => IsOwner() && IsPendingLike(Rental?.Status),
+            RentalStatuses.Approved);
     }
 
     [RelayCommand]
     private async Task RejectAsync()
     {
-        await UpdateStatusAsync("rejected");
+        await UpdateStatusIfAllowedAsync(
+            () => IsOwner() && IsPendingLike(Rental?.Status),
+            RentalStatuses.Rejected);
     }
 
-    private async Task UpdateStatusAsync(string newStatus)
+    [RelayCommand]
+    private async Task CancelAsBorrowerAsync()
     {
-        if (Rental is null || !ShowOwnerActions)
+        await UpdateStatusIfAllowedAsync(
+            () => IsBorrower() && IsPendingLike(Rental?.Status),
+            RentalStatuses.Cancelled);
+    }
+
+    private bool IsOwner() =>
+        Rental is not null && _authService.CurrentUser?.Id == Rental.OwnerId;
+
+    private bool IsBorrower() =>
+        Rental is not null && _authService.CurrentUser?.Id == Rental.BorrowerUserId;
+
+    private async Task UpdateStatusIfAllowedAsync(Func<bool> canAct, string newStatus)
+    {
+        if (Rental is null || !canAct())
             return;
 
         var user = _authService.CurrentUser;
@@ -193,16 +222,16 @@ public partial class RentalDetailViewModel : BaseViewModel
         OnPropertyChanged(nameof(HasRequestedAt));
         OnPropertyChanged(nameof(TotalPriceDisplay));
         OnPropertyChanged(nameof(DateRangeDisplay));
+        OnPropertyChanged(nameof(StatusDisplayText));
         OnPropertyChanged(nameof(RequestedAtDisplay));
         OnPropertyChanged(nameof(ShowOwnerActions));
+        OnPropertyChanged(nameof(ShowBorrowerCancel));
     }
 
     private static bool IsPendingLike(string? status)
     {
         if (string.IsNullOrWhiteSpace(status))
             return false;
-        var s = status.Trim();
-        return s.Equals(RentalStatuses.Pending, StringComparison.OrdinalIgnoreCase)
-               || s.Equals("pending", StringComparison.OrdinalIgnoreCase);
+        return status.Trim().Equals(RentalStatuses.Pending, StringComparison.OrdinalIgnoreCase);
     }
 }

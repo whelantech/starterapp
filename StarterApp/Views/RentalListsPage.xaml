@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:StarterApp.Database.Models;assembly=StarterApp.Database"
              x:Class="StarterApp.Views.RentalListsPage"
              Title="{Binding Title}">
 
@@ -22,9 +23,7 @@
                 <CollectionView x:Name="RentalsCollection"
                                 ItemsSource="{Binding Rentals}"
                                 Margin="8,0"
-                                SelectionMode="Single"
-                                SelectedItem="{Binding SelectedRental, Mode=TwoWay}"
-                                SelectionChanged="RentalsCollection_SelectionChanged">
+                                SelectionMode="None">
                     <CollectionView.EmptyView>
                         <Label Text="No rentals yet."
                                HorizontalOptions="Center"
@@ -33,7 +32,7 @@
                                TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray400}}" />
                     </CollectionView.EmptyView>
                     <CollectionView.ItemTemplate>
-                        <DataTemplate>
+                        <DataTemplate x:DataType="models:Rental">
                             <Border Padding="12"
                                     Margin="0,4"
                                     Stroke="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}"
@@ -41,6 +40,11 @@
                                 <Border.StrokeShape>
                                     <RoundRectangle CornerRadius="8" />
                                 </Border.StrokeShape>
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.OpenRentalDetailCommand}"
+                                        CommandParameter="{Binding .}" />
+                                </Border.GestureRecognizers>
                                 <VerticalStackLayout Spacing="4">
                                     <Label Text="{Binding ItemTitle}"
                                            FontAttributes="Bold"
@@ -58,7 +62,7 @@
                                                Text="{Binding EndDate, StringFormat='{0:yyyy-MM-dd}'}" />
                                     </HorizontalStackLayout>
                                     <HorizontalStackLayout Spacing="12">
-                                        <Label Text="{Binding Status}"
+                                        <Label Text="{Binding Status, Converter={StaticResource RentalStatusDisplayConverter}}"
                                                FontSize="13" />
                                         <Label Text="{Binding TotalPrice, StringFormat='£{0}'}"
                                                FontAttributes="Bold"

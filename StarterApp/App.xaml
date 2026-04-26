@@ -10,6 +10,7 @@
             <converters:StringToBoolConverter x:Key="StringToBoolConverter" />
             <converters:BoolToTextConverter x:Key="BoolToTextConverter" />
             <converters:IsNotNullConverter x:Key="IsNotNullConverter" />
+            <converters:RentalStatusDisplayConverter x:Key="RentalStatusDisplayConverter" />
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="Resources/Styles/Colors.xaml" />
                 <ResourceDictionary Source="Resources/Styles/Styles.xaml" />

@@ -33,7 +33,7 @@ public class Item
     /// Daily Rate for the item
     /// </summary>
     [Required]
-    public decimal DailyRate { get; set; } = 0;
+    public int DailyRate { get; set; } = 0;
 
     /// <summary>
     /// Foreign key to Category

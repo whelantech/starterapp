@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using StarterApp.Database.Models;
 using StarterApp.Database.Repositories;
 using StarterApp.Services;
+using StarterApp.Views;
 
 namespace StarterApp.ViewModels;
 
@@ -187,7 +188,7 @@ public partial class RentalRequestViewModel : BaseViewModel
 
             var commentsToPersist = _commentsPersistLocally ? Comments : null;
 
-            await _rentalRepository.CreateRequestAsync(
+            var created = await _rentalRepository.CreateRequestAsync(
                 _itemId.Value,
                 user.Id,
                 start,
@@ -196,10 +197,11 @@ public partial class RentalRequestViewModel : BaseViewModel
 
             await Application.Current!.MainPage!.DisplayAlert(
                 "Rental requested",
-                "Your rental request was submitted.",
+                "Your request was sent. You can cancel it on the next screen if you change your mind.",
                 "OK");
 
             await _navigationService.NavigateBackAsync();
+            await _navigationService.NavigateToAsync($"{nameof(RentalDetailPage)}?rentalId={created.Id}");
         }
         catch (Exception ex)
         {

@@ -172,16 +172,21 @@ public class RentalRepository : IRentalRepository
         if (!isBorrower && !isOwner)
             throw new UnauthorizedAccessException("Not allowed to update this rental.");
 
-        var normalized = newStatus.Trim();
-        if (isOwner && (normalized == RentalStatuses.Approved || normalized == RentalStatuses.Rejected))
+        var n = newStatus.Trim();
+        if (isOwner && (n.Equals(RentalStatuses.Approved, StringComparison.OrdinalIgnoreCase) ||
+                        n.Equals(RentalStatuses.Rejected, StringComparison.OrdinalIgnoreCase)))
         {
-            rental.Status = normalized;
+            rental.Status = n.Equals(RentalStatuses.Approved, StringComparison.OrdinalIgnoreCase)
+                ? RentalStatuses.Approved
+                : RentalStatuses.Rejected;
         }
-        else if (isBorrower && normalized == RentalStatuses.Cancelled && rental.Status == RentalStatuses.Pending)
+        else if (isBorrower && n.Equals(RentalStatuses.Cancelled, StringComparison.OrdinalIgnoreCase) &&
+                 rental.Status == RentalStatuses.Pending)
         {
             rental.Status = RentalStatuses.Cancelled;
         }
-        else if (isOwner && normalized == RentalStatuses.Completed && rental.Status == RentalStatuses.Approved)
+        else if (isOwner && n.Equals(RentalStatuses.Completed, StringComparison.OrdinalIgnoreCase) &&
+                 rental.Status == RentalStatuses.Approved)
         {
             rental.Status = RentalStatuses.Completed;
         }

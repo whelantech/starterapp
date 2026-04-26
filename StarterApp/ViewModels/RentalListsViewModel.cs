@@ -18,9 +18,6 @@ public partial class RentalListsViewModel : BaseViewModel
     /// <summary>0 = outgoing, 1 = incoming.</summary>
     [ObservableProperty] private int scopeIndex;
 
-    /// <summary>Row selection (cleared after opening details; drives CollectionView highlight).</summary>
-    [ObservableProperty] private Rental? selectedRental;
-
     public ObservableCollection<Rental> Rentals { get; } = new();
 
     public RentalListsViewModel(
@@ -35,18 +32,17 @@ public partial class RentalListsViewModel : BaseViewModel
     }
 
     /// <summary>Opens the read-only detail page for a rental (incoming or outgoing).</summary>
-    public async Task OpenRentalDetailAsync(Rental rental)
+    [RelayCommand]
+    private async Task OpenRentalDetailAsync(Rental? rental)
     {
         if (rental is null)
             return;
 
         await _navigationService.NavigateToAsync($"{nameof(RentalDetailPage)}?rentalId={rental.Id}");
-        SelectedRental = null;
     }
 
     partial void OnScopeIndexChanged(int value)
     {
-        SelectedRental = null;
         _ = LoadAsync();
     }
 
@@ -58,7 +54,6 @@ public partial class RentalListsViewModel : BaseViewModel
         {
             await MainThreadInvokeAsync(() =>
             {
-                SelectedRental = null;
                 Rentals.Clear();
             });
             SetError("Sign in to see your rentals.");
@@ -76,7 +71,6 @@ public partial class RentalListsViewModel : BaseViewModel
 
             await MainThreadInvokeAsync(() =>
             {
-                SelectedRental = null;
                 Rentals.Clear();
                 foreach (var r in list)
                     Rentals.Add(r);

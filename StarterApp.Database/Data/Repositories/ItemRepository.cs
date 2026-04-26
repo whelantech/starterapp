@@ -11,10 +11,12 @@ namespace StarterApp.Database.Repositories;
 public class ItemRepository : IItemRepository
 {
     private readonly AppDbContext _context;
+    private readonly IRepository<Category, int> _categories;
 
-    public ItemRepository(AppDbContext context)
+    public ItemRepository(AppDbContext context, IRepository<Category, int> categories)
     {
         _context = context;
+        _categories = categories;
     }
 
     // ==================== Item Operations ====================
@@ -193,10 +195,7 @@ public class ItemRepository : IItemRepository
     {
         try
         {
-            _context.Categories.Add(category);
-            await _context.SaveChangesAsync();
-
-            return category;
+            return await _categories.AddAsync(category);
         }
         catch (Exception ex)
         {
@@ -210,19 +209,7 @@ public class ItemRepository : IItemRepository
     {
         try
         {
-            var existingCategory = await _context.Categories.FindAsync(category.Id);
-            if (existingCategory == null)
-            {
-                return null;
-            }
-
-            existingCategory.Name = category.Name;
-            existingCategory.ColorHex = category.ColorHex;
-            existingCategory.Description = category.Description;
-
-            await _context.SaveChangesAsync();
-
-            return existingCategory;
+            return await _categories.UpdateAsync(category);
         }
         catch (Exception ex)
         {
@@ -236,16 +223,7 @@ public class ItemRepository : IItemRepository
     {
         try
         {
-            var category = await _context.Categories.FindAsync(id);
-            if (category == null)
-            {
-                return false;
-            }
-
-            _context.Categories.Remove(category);
-            await _context.SaveChangesAsync();
-
-            return true;
+            return await _categories.RemoveAsync(id);
         }
         catch (Exception ex)
         {
