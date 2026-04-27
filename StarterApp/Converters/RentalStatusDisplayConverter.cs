@@ -21,6 +21,10 @@ public sealed class RentalStatusDisplayConverter : IValueConverter
             return "Approved";
         if (status.Equals(RentalStatuses.Rejected, StringComparison.OrdinalIgnoreCase))
             return "Rejected";
+        if (status.Equals(RentalStatuses.OutForRent, StringComparison.OrdinalIgnoreCase))
+            return "Out for rent";
+        if (status.Equals(RentalStatuses.Returned, StringComparison.OrdinalIgnoreCase))
+            return "Returned";
         if (status.Equals(RentalStatuses.Completed, StringComparison.OrdinalIgnoreCase))
             return "Completed";
         if (status.Equals(RentalStatuses.Cancelled, StringComparison.OrdinalIgnoreCase) ||

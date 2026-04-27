@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using StarterApp.Database.Data;
 using StarterApp.Database.Models;
+using StarterApp.Database.States;
 
 namespace StarterApp.Database.Repositories;
 
@@ -12,7 +13,9 @@ public class RentalRepository : IRentalRepository
     private static readonly string[] OverlapBlockingStatuses =
     {
         RentalStatuses.Pending,
-        RentalStatuses.Approved
+        RentalStatuses.Approved,
+        RentalStatuses.OutForRent,
+        RentalStatuses.Returned
     };
 
     private readonly AppDbContext _context;
@@ -44,7 +47,7 @@ public class RentalRepository : IRentalRepository
         if (!item.IsAvailable)
             throw new InvalidOperationException("This item is not available for rent.");
 
-        var hasOverlap = await HasBlockingOverlapAsync(itemId, start, end, cancellationToken);
+        var hasOverlap = await HasBlockingOverlapAsync(itemId, start, end, excludeRentalId: null, cancellationToken);
         if (hasOverlap)
             throw new InvalidOperationException("Those dates overlap an existing rental for this item.");
 
@@ -73,13 +76,21 @@ public class RentalRepository : IRentalRepository
                ?? rental;
     }
 
-    private async Task<bool> HasBlockingOverlapAsync(int itemId, DateOnly start, DateOnly end,
+    private async Task<bool> HasBlockingOverlapAsync(
+        int itemId,
+        DateOnly start,
+        DateOnly end,
+        int? excludeRentalId,
         CancellationToken cancellationToken)
     {
-        return await _context.Rentals
+        var q = _context.Rentals
             .AsNoTracking()
-            .Where(r => r.ItemId == itemId && OverlapBlockingStatuses.Contains(r.Status))
-            .AnyAsync(r => r.StartDate <= end && r.EndDate >= start, cancellationToken);
+            .Where(r => r.ItemId == itemId && OverlapBlockingStatuses.Contains(r.Status));
+
+        if (excludeRentalId.HasValue)
+            q = q.Where(r => r.Id != excludeRentalId.Value);
+
+        return await q.AnyAsync(r => r.StartDate <= end && r.EndDate >= start, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -154,10 +165,10 @@ public class RentalRepository : IRentalRepository
     }
 
     /// <inheritdoc />
-    public async Task UpdateStatusAsync(
+    public async Task TransitionAsync(
         int rentalId,
         int actingUserId,
-        string newStatus,
+        RentalTransition transition,
         CancellationToken cancellationToken = default)
     {
         var rental = await _context.Rentals
@@ -172,28 +183,74 @@ public class RentalRepository : IRentalRepository
         if (!isBorrower && !isOwner)
             throw new UnauthorizedAccessException("Not allowed to update this rental.");
 
-        var n = newStatus.Trim();
-        if (isOwner && (n.Equals(RentalStatuses.Approved, StringComparison.OrdinalIgnoreCase) ||
-                        n.Equals(RentalStatuses.Rejected, StringComparison.OrdinalIgnoreCase)))
-        {
-            rental.Status = n.Equals(RentalStatuses.Approved, StringComparison.OrdinalIgnoreCase)
-                ? RentalStatuses.Approved
-                : RentalStatuses.Rejected;
-        }
-        else if (isBorrower && n.Equals(RentalStatuses.Cancelled, StringComparison.OrdinalIgnoreCase) &&
-                 rental.Status == RentalStatuses.Pending)
-        {
-            rental.Status = RentalStatuses.Cancelled;
-        }
-        else if (isOwner && n.Equals(RentalStatuses.Completed, StringComparison.OrdinalIgnoreCase) &&
-                 rental.Status == RentalStatuses.Approved)
-        {
-            rental.Status = RentalStatuses.Completed;
-        }
-        else
-            throw new InvalidOperationException("Invalid status transition.");
+        var state = RentalStateFactory.FromStatus(rental.Status);
 
-        await _context.SaveChangesAsync(cancellationToken);
+        switch (transition)
+        {
+            case RentalTransition.Approve:
+                if (!isOwner)
+                    throw new UnauthorizedAccessException("Only the owner can approve.");
+                if (await HasBlockingOverlapAsync(
+                        rental.ItemId,
+                        rental.StartDate,
+                        rental.EndDate,
+                        excludeRentalId: rental.Id,
+                        cancellationToken))
+                    throw new InvalidOperationException("Those dates overlap an existing rental for this item.");
+                await InvokeStateAsync(state, s => s.Approve(rental)).ConfigureAwait(false);
+                break;
+
+            case RentalTransition.Reject:
+                if (!isOwner)
+                    throw new UnauthorizedAccessException("Only the owner can reject.");
+                await InvokeStateAsync(state, s => s.Reject(rental)).ConfigureAwait(false);
+                break;
+
+            case RentalTransition.Cancel:
+                if (!isBorrower)
+                    throw new UnauthorizedAccessException("Only the borrower can cancel a pending request.");
+                await InvokeStateAsync(state, s => s.Cancel(rental)).ConfigureAwait(false);
+                break;
+
+            case RentalTransition.StartRental:
+                if (!isOwner)
+                    throw new UnauthorizedAccessException("Only the owner can start the rental.");
+                await InvokeStateAsync(state, s => s.StartRental(rental)).ConfigureAwait(false);
+                break;
+
+            case RentalTransition.Return:
+                if (!isOwner)
+                    throw new UnauthorizedAccessException("Only the owner can mark the item returned.");
+                await InvokeStateAsync(state, s => s.Return(rental)).ConfigureAwait(false);
+                break;
+
+            case RentalTransition.Complete:
+                if (!isOwner)
+                    throw new UnauthorizedAccessException("Only the owner can complete the rental.");
+                await InvokeStateAsync(state, s => s.Complete(rental)).ConfigureAwait(false);
+                break;
+
+            default:
+                throw new ArgumentOutOfRangeException(nameof(transition), transition, null);
+        }
+
+        await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public Task UpdateStatusAsync(
+        int rentalId,
+        int actingUserId,
+        string newStatus,
+        CancellationToken cancellationToken = default)
+    {
+        var transition = RentalTransitionParser.FromNewStatusString(newStatus);
+        return TransitionAsync(rentalId, actingUserId, transition, cancellationToken);
+    }
+
+    private static async Task InvokeStateAsync(IRentalState state, Func<IRentalState, Task<IRentalState>> call)
+    {
+        _ = await call(state).ConfigureAwait(false);
     }
 
     private static void DenormalizeForDisplay(Rental r)

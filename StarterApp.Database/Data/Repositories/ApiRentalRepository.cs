@@ -154,14 +154,15 @@ public class ApiRentalRepository : IRentalRepository
     }
 
     /// <inheritdoc />
-    public async Task UpdateStatusAsync(
+    public async Task TransitionAsync(
         int rentalId,
         int actingUserId,
-        string newStatus,
+        RentalTransition transition,
         CancellationToken cancellationToken = default)
     {
         _ = actingUserId;
-        var body = new { status = newStatus.Trim() };
+        var status = RentalTransitionApiMapper.ToApiStatus(transition);
+        var body = new { status };
         using var response =
             await _httpClient.PatchAsJsonAsync($"{RentalsEndpoint}/{rentalId}/status", body, JsonOptions, cancellationToken);
 
@@ -170,6 +171,17 @@ public class ApiRentalRepository : IRentalRepository
             var err = await ReadErrorAsync(response, cancellationToken);
             throw new InvalidOperationException(err ?? "Could not update rental status.");
         }
+    }
+
+    /// <inheritdoc />
+    public Task UpdateStatusAsync(
+        int rentalId,
+        int actingUserId,
+        string newStatus,
+        CancellationToken cancellationToken = default)
+    {
+        var transition = RentalTransitionParser.FromNewStatusString(newStatus);
+        return TransitionAsync(rentalId, actingUserId, transition, cancellationToken);
     }
 
     private static string BuildListUrl(string segment, string? statusFilter)

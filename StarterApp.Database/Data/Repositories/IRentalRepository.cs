@@ -40,7 +40,16 @@ public interface IRentalRepository
     Task<Rental?> GetByIdAsync(int rentalId, int currentUserId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Update status (owner/borrower rules enforced per backend).
+    /// Apply a workflow transition (state machine); owner/borrower rules enforced in the repository.
+    /// </summary>
+    Task TransitionAsync(
+        int rentalId,
+        int actingUserId,
+        RentalTransition transition,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Update status (owner/borrower rules enforced per backend). Prefer <see cref="TransitionAsync"/>.
     /// </summary>
     Task UpdateStatusAsync(
         int rentalId,

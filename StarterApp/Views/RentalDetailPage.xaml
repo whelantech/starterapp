@@ -100,6 +100,39 @@
                                 Command="{Binding CancelAsBorrowerCommand}" />
                     </VerticalStackLayout>
 
+                    <VerticalStackLayout Spacing="8" IsVisible="{Binding ShowOwnerApprovedBeforeStart}">
+                        <Label Text="The rental period has not started yet. You can mark this listing as out for rent on or after the start date."
+                               FontSize="12"
+                               TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray400}}" />
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="8" IsVisible="{Binding ShowOwnerStartRental}">
+                        <Label Text="Start the rental period when the item goes out."
+                               FontSize="12"
+                               TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray400}}" />
+                        <Button Text="Start rental (out for rent)"
+                                Command="{Binding StartRentalCommand}"
+                                HorizontalOptions="Fill" />
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="8" IsVisible="{Binding ShowOwnerReturn}">
+                        <Label Text="Mark the item as returned when the borrower brings it back."
+                               FontSize="12"
+                               TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray400}}" />
+                        <Button Text="Mark returned"
+                                Command="{Binding ReturnCommand}"
+                                HorizontalOptions="Fill" />
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="8" IsVisible="{Binding ShowOwnerComplete}">
+                        <Label Text="Close this rental after return is confirmed."
+                               FontSize="12"
+                               TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray400}}" />
+                        <Button Text="Complete rental"
+                                Command="{Binding CompleteCommand}"
+                                HorizontalOptions="Fill" />
+                    </VerticalStackLayout>
+
                 </VerticalStackLayout>
             </ScrollView>
         </RefreshView>
