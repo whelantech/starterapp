@@ -1,0 +1,28 @@
+name: Build & Test Workflow
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Restore workloads
+        run: dotnet workload restore ./StarterApp/StarterApp.csproj
+      - name: Restore Dependencies
+        run: dotnet restore ./StarterApp.sln
+      - name: Build Project
+        run: dotnet build ./StarterApp/StarterApp.csproj -c Release --no-restore
+      - name: Run Tests
+        run: dotnet test ./RentalApp.Test/RentalApp.Test.csproj -c Release --no-build
+
+
