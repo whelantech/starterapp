@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat code coverage">
+        <Configuration>
+          <Format>cobertura,json</Format>
+          <Exclude>[*.Test]*,[*]Migrations.*,[*]Views.*,[*]Platforms.*</Exclude>
+          <ExcludeByFile>**/Views/**,**/Platforms/**,**/obj/**,**/Migrations/**</ExcludeByFile>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

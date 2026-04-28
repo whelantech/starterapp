@@ -14,6 +14,8 @@ public partial class CreateItemViewModel : BaseViewModel
 {
     private readonly IItemRepository _repository;
     private readonly IAuthenticationService _authService;
+    private readonly IShellNavigation _shell;
+    private readonly IUiDialogs _uiDialogs;
 
     /// <summary>
     /// Prevents overlapping InitializeAsync calls (Shell can fire ApplyQueryAttributes and OnAppearing
@@ -44,10 +46,16 @@ public partial class CreateItemViewModel : BaseViewModel
 
     [ObservableProperty] private bool isEditMode;
 
-    public CreateItemViewModel(IItemRepository repository, IAuthenticationService authService)
+    public CreateItemViewModel(
+        IItemRepository repository,
+        IAuthenticationService authService,
+        IShellNavigation shell,
+        IUiDialogs uiDialogs)
     {
         _repository = repository;
         _authService = authService;
+        _shell = shell;
+        _uiDialogs = uiDialogs;
         Title = "Create Item";
     }
 
@@ -78,7 +86,7 @@ public partial class CreateItemViewModel : BaseViewModel
                     var currentUserId = _authService.CurrentUser?.Id;
                     if (currentUserId is null || item.OwnerId != currentUserId)
                     {
-                        await Shell.Current.GoToAsync("..");
+                        await _shell.GoToAsync("..");
                         return;
                     }
 
@@ -172,7 +180,7 @@ public partial class CreateItemViewModel : BaseViewModel
                 await _repository.CreateItemAsync(item);
             }
 
-            await Shell.Current.GoToAsync("..");
+            await _shell.GoToAsync("..");
         }
         catch (Exception ex)
         {
@@ -193,7 +201,7 @@ public partial class CreateItemViewModel : BaseViewModel
         if (!IsEditMode || !_itemId.HasValue)
             return;
 
-        bool confirm = await Application.Current.MainPage.DisplayAlert(
+        bool confirm = await _uiDialogs.DisplayConfirmAsync(
             "Delete Item",
             "Are you sure you want to delete this item?",
             "Delete",
@@ -210,7 +218,7 @@ public partial class CreateItemViewModel : BaseViewModel
 
             if (deleted)
             {
-                await Shell.Current.GoToAsync("..");
+                await _shell.GoToAsync("..");
             }
             else
             {
@@ -230,6 +238,6 @@ public partial class CreateItemViewModel : BaseViewModel
     [RelayCommand]
     private async Task CancelAsync()
     {
-        await Shell.Current.GoToAsync("..");
+        await _shell.GoToAsync("..");
     }
 }

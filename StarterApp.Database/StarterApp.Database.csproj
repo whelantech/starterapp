@@ -20,5 +20,9 @@
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</EmbeddedResource>
 	</ItemGroup>
+
+	<ItemGroup>
+		<InternalsVisibleTo Include="RentalApp.Test" />
+	</ItemGroup>
   
 </Project>

@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using StarterApp.Database.Models;
 using StarterApp.Database.Repositories;
+using StarterApp.Services;
 using StarterApp.Views;
 using System.Collections.ObjectModel;
 
@@ -13,6 +14,8 @@ namespace StarterApp.ViewModels;
 public partial class ItemsListViewModel : BaseViewModel
 {
     private readonly IItemRepository _repository;
+    private readonly IShellNavigation _shell;
+    private readonly IUiDialogs _uiDialogs;
     private bool _assigningCategoriesFromService;
 
     /// <summary>
@@ -35,9 +38,11 @@ public partial class ItemsListViewModel : BaseViewModel
     /// </summary>
     [ObservableProperty] private bool isRefreshing;
 
-    public ItemsListViewModel(IItemRepository repository)
+    public ItemsListViewModel(IItemRepository repository, IShellNavigation shell, IUiDialogs uiDialogs)
     {
         _repository = repository;
+        _shell = shell;
+        _uiDialogs = uiDialogs;
         Title = "Marketplace Items";
     }
 
@@ -118,7 +123,7 @@ public partial class ItemsListViewModel : BaseViewModel
     [RelayCommand]
     private async Task AddItemAsync()
     {
-        await Shell.Current.GoToAsync("item");
+        await _shell.GoToAsync("item");
     }
 
     /// <summary>
@@ -128,7 +133,7 @@ public partial class ItemsListViewModel : BaseViewModel
     private async Task OpenItemDetailAsync(Item? item)
     {
         if (item == null) return;
-        await Shell.Current.GoToAsync($"{nameof(ItemDetailsPage)}?id={item.Id}");
+        await _shell.GoToAsync($"{nameof(ItemDetailsPage)}?id={item.Id}");
     }
 
     /// <summary>
@@ -138,7 +143,7 @@ public partial class ItemsListViewModel : BaseViewModel
     private async Task EditItemAsync(Item item)
     {
         if (item == null) return;
-        await Shell.Current.GoToAsync($"item?id={item.Id}");
+        await _shell.GoToAsync($"item?id={item.Id}");
     }
 
     /// <summary>
@@ -149,10 +154,7 @@ public partial class ItemsListViewModel : BaseViewModel
     {
         if (item == null) return;
 
-        var mainPage = Application.Current?.MainPage;
-        if (mainPage is null) return;
-
-        bool confirm = await mainPage.DisplayAlert(
+        bool confirm = await _uiDialogs.DisplayConfirmAsync(
             "Delete Item",
             $"Are you sure you want to delete '{item.Title}'?",
             "Delete",

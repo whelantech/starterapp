@@ -70,13 +70,18 @@ public static class MauiProgram
             });
 
         builder.Services.AddSingleton<INavigationService, NavigationService>();
+        builder.Services.AddSingleton<IShellNavigation, ShellNavigationService>();
+        builder.Services.AddSingleton<IUiDialogs, MauiUiDialogsService>();
 
         builder.Services.AddSingleton<AppShellViewModel>();
         builder.Services.AddSingleton<AppShell>();
         builder.Services.AddSingleton<App>();
         builder.Services.AddTransient<MainViewModel>();
         builder.Services.AddTransient<MainPage>();
-        builder.Services.AddSingleton<LoginViewModel>();
+        builder.Services.AddSingleton<LoginViewModel>(sp => new LoginViewModel(
+            sp.GetRequiredService<IAuthenticationService>(),
+            sp.GetRequiredService<INavigationService>(),
+            sp.GetRequiredService<IUiDialogs>()));
         builder.Services.AddTransient<LoginPage>();
         builder.Services.AddSingleton<RegisterViewModel>();
         builder.Services.AddTransient<RegisterPage>();

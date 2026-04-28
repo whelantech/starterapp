@@ -1,0 +1,7 @@
+<Project>
+  <!-- Avoid NU1900 when the vulnerability service cannot be reached (same proxy/TLS
+       issues as package restore, or air-gapped builds). Re-enable to audit: <NuGetAudit>true</NuGetAudit> -->
+  <PropertyGroup>
+    <NuGetAudit>false</NuGetAudit>
+  </PropertyGroup>
+</Project>

@@ -53,6 +53,14 @@ Before using this app, ensure you have:
 2. **Docker** installed and running
 3. **PostgreSQL container** running (see [dev-environment tutorial](https://edinburgh-napier.github.io/SET09102/tutorials/csharp/dev-environment/))
 
+#### NuGet restore fails with `NU1301` / `UntrustedRoot` (TLS inspection)
+
+If `dotnet restore` or `dotnet test` cannot load `https://api.nuget.org` (common behind corporate proxies, **Cloudflare Gateway**, or SSL-decrypting firewalls), the machine does not **trust the interception root CA**. On Linux, run:
+
+`sudo sh scripts/trust-tls-interception-ca-for-nuget.sh`
+
+Or ask IT for the proxy’s root CA file and add it: copy the `.crt` to `/usr/local/share/ca-certificates/`, then `sudo update-ca-certificates`. Re-run `dotnet restore`.
+
 ### Configuration
 
 1. Copy `StarterApp.Database/appsettings.json.template` to `StarterApp.Database/appsettings.json`
