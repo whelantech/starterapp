@@ -29,3 +29,6 @@ postgres_data/
 *.userosscache
 *.sln.docstates
 
+# Test Specific Files
+StarterApp.Test/obj
+StarterApp.Test/bin
