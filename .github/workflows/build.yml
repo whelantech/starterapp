@@ -8,8 +8,8 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    arch: arm64
+    # ARM64 image (GitHub-hosted). Use the label below — a separate `arch:` key is not supported.
+    runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
