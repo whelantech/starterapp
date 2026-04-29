@@ -49,6 +49,16 @@
 		<RuntimeIdentifier>android-arm64</RuntimeIdentifier>
 	</PropertyGroup>
 
+	<!-- Release: pin RID so Linux x64 CI does not default to android-x64 (NETSDK1047 if assets lack that graph). -->
+	<PropertyGroup Condition="'$(Configuration)' == 'Release' AND $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+		<RuntimeIdentifier>android-arm64</RuntimeIdentifier>
+	</PropertyGroup>
+
+	<!-- GitHub Actions: Mono AOT can crash (SIGSEGV) on large assemblies (e.g. EF Core) on Linux agents; CI only needs a successful compile. -->
+	<PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true' AND $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+		<RunAOTCompilation>false</RunAOTCompilation>
+	</PropertyGroup>
+
 	<ItemGroup>
 		<!-- App Icon -->
 		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
