@@ -13,34 +13,40 @@ public class AppDbContext : DbContext
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     { }
 
- protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-     {
-         var connectionString = Environment.GetEnvironmentVariable($"ConnectionStrings__DevelopmentConnection");
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        if (optionsBuilder.IsConfigured)
+            return;
 
-         if (string.IsNullOrEmpty(connectionString))
-         {
-             var assembly = Assembly.GetExecutingAssembly();
-             using var stream = assembly.GetManifestResourceStream("StarterApp.Database.appsettings.json");
+        var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__TestConnection");
 
-             if (stream != null)
-             {
-                 var config = new ConfigurationBuilder()
-                     .AddJsonStream(stream)
-                     .Build();
+        if (string.IsNullOrEmpty(connectionString))
+            connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DevelopmentConnection");
 
-                 connectionString = config.GetConnectionString("DevelopmentConnection");
-             }
-         }
+        if (string.IsNullOrEmpty(connectionString))
+        {
+            var assembly = Assembly.GetExecutingAssembly();
+            using var stream = assembly.GetManifestResourceStream("StarterApp.Database.appsettings.json");
 
-         if (string.IsNullOrEmpty(connectionString))
-         {
-             throw new InvalidOperationException("Database connection string is not configured.");
-         }
+            if (stream != null)
+            {
+                var config = new ConfigurationBuilder()
+                    .AddJsonStream(stream)
+                    .Build();
 
-         optionsBuilder.UseNpgsql(
-             connectionString,
-             o => o.MigrationsAssembly("StarterApp.Migrations")); 
-     }
+                connectionString = config.GetConnectionString("DevelopmentConnection");
+            }
+        }
+
+        if (string.IsNullOrEmpty(connectionString))
+        {
+            throw new InvalidOperationException("Database connection string is not configured.");
+        }
+
+        optionsBuilder.UseNpgsql(
+            connectionString,
+            o => o.MigrationsAssembly("StarterApp.Migrations"));
+    }
 
     public DbSet<Role> Roles { get; set; }
     public DbSet<User> Users { get; set; }

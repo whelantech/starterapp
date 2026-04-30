@@ -39,25 +39,20 @@ jobs:
         run: dotnet workload restore StarterApp/StarterApp.csproj
 
       - name: Restore dependencies
-        run: |
-          dotnet restore StarterApp.sln
-          dotnet restore StarterApp.Test/StarterApp.Test.csproj
+        run: dotnet restore StarterApp.sln
 
-      - name: Build solution (app, DB, migrations, RentalApp.Test)
+      - name: Build solution (app, DB, migrations, test projects)
+        env:
+          ConnectionStrings__TestConnection: ${{ secrets.TestConnection_CONNECTION_STRING }}
         run: dotnet build StarterApp.sln -c Release -f net10.0 --no-restore
 
-      - name: Build StarterApp.Test
-        run: dotnet build StarterApp.Test/StarterApp.Test.csproj -c Release -f net10.0 --no-restore
-
-      - name: Run tests — RentalApp.Test (EF in-memory)
-        run: dotnet test ./RentalApp.Test/RentalApp.Test.csproj -c Release -f net10.0 --no-build
-
-      # TestPostgresFixture reads TEST_DATABASE_CONNECTION; host must be `postgres` (service name).
-      - name: Run tests — StarterApp.Test (Postgres)
+      # Runs RentalApp.Test (in-memory) and StarterApp.Test (Postgres smoke via ConnectionStrings__TestConnection).
+      # Use Host=postgres in the secret (service container hostname). Fallback supports forks without secrets.
+      - name: Run tests — StarterApp.sln
         env:
-          TEST_DATABASE_CONNECTION: ${{ secrets.TEST_DATABASE_CONNECTION }}
+          ConnectionStrings__TestConnection: ${{ secrets.TestConnection_CONNECTION_STRING }}
         run: |
-          if [ -z "$TEST_DATABASE_CONNECTION" ]; then
-            export TEST_DATABASE_CONNECTION='Host=postgres;Port=5432;Username=test_user;Password=test_password;Database=testdb'
+          if [ -z "$ConnectionStrings__TestConnection" ]; then
+            export ConnectionStrings__TestConnection='Host=postgres;Port=5432;Username=test_user;Password=test_password;Database=testdb'
           fi
-          dotnet test ./StarterApp.Test/StarterApp.Test.csproj -c Release -f net10.0 --no-build
+          dotnet test StarterApp.sln -c Release -f net10.0 --no-build
