@@ -17,11 +17,11 @@ jobs:
         with:
           dotnet-version: "10.0.x"
       - name: Restore workloads
-        run: dotnet workload restore ./StarterApp/StarterApp.csproj
+        run: dotnet workload restore ${{ vars.CSPROJ_PATH }}
       - name: Restore Dependencies
-        run: dotnet restore ./StarterApp.sln
+        run: dotnet restore ${{ vars.CSPROJ_PATH }}
       - name: Build Project
-        run: dotnet build ./StarterApp/StarterApp.csproj -c Release --no-restore
+        run: dotnet build ${{ vars.CSPROJ_PATH }} -c Release --no-restore
       - name: Run Tests
         run: dotnet test ./RentalApp.Test/RentalApp.Test.csproj -c Release --no-build
 
