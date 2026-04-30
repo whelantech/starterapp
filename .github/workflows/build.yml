@@ -46,7 +46,7 @@ jobs:
           ConnectionStrings__TestConnection: ${{ secrets.TestConnection_CONNECTION_STRING }}
         run: dotnet build StarterApp.sln -c Release -f net10.0 --no-restore
 
-      # Runs RentalApp.Test (in-memory) and StarterApp.Test (Postgres smoke via ConnectionStrings__TestConnection).
+      # Runs StarterApp.Test (Postgres via embedded TestConnection; overridden in CI by ConnectionStrings__TestConnection during build when set).
       # Use Host=postgres in the secret (service container hostname). Fallback supports forks without secrets.
       - name: Run tests — StarterApp.sln
         env:

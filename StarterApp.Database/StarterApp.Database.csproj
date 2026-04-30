@@ -16,13 +16,13 @@
   </ItemGroup>
 
 	<ItemGroup>
-		<InternalsVisibleTo Include="RentalApp.Test" />
+		<InternalsVisibleTo Include="StarterApp.Test" />
 	</ItemGroup>
 
-  <ItemGroup>
-     <None Update="appsettings.json" Condition="Exists('appsettings.json')">
-         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-     </None>
- </ItemGroup>
+	<ItemGroup>
+		<EmbeddedResource Include="appsettings.json">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</EmbeddedResource>
+	</ItemGroup>
   
 </Project>
