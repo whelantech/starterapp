@@ -11,36 +11,53 @@ jobs:
     runs-on: ubuntu-latest
 
     services:
-       postgres:
-         image: postgres:16
-         env:
-         ConnectionStrings__TestConnection: ${{ secrets.TestConnection_CONNECTION_STRING }}
-           POSTGRES_USER: test_user
-           POSTGRES_PASSWORD: test_password
-           POSTGRES_DB: testdb
-         options: >-
-           --health-cmd pg_isready
-           --health-interval 10s
-           --health-timeout 5s
-           --health-retries 5
-         ports:
-           - 5432:5432
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: testdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
+
+      # MAUI: only the net10.0 TFM is built on Linux CI.
       - name: Restore workloads
-        run: dotnet workload restore ${{ vars.CSPROJ_PATH }}
-      - name: Restore Dependencies
-        run: dotnet restore ${{ vars.CSPROJ_PATH }}
-      - name: Build Project
-        run: dotnet build ${{ vars.CSPROJ_PATH }} -c Release --no-restore
-      - name: Run Tests
-        env: 
-        ConnectionStrings__TestConnection: ${{ secrets.TestConnection_CONNECTION_STRING }}
-        run: dotnet test ./RentalApp.Test/RentalApp.Test.csproj -c Release --no-build
+        run: dotnet workload restore StarterApp/StarterApp.csproj
 
+      - name: Restore dependencies
+        run: |
+          dotnet restore StarterApp.sln
+          dotnet restore StarterApp.Test/StarterApp.Test.csproj
 
+      - name: Build solution (app, DB, migrations, RentalApp.Test)
+        run: dotnet build StarterApp.sln -c Release -f net10.0 --no-restore
+
+      - name: Build StarterApp.Test
+        run: dotnet build StarterApp.Test/StarterApp.Test.csproj -c Release -f net10.0 --no-restore
+
+      - name: Run tests — RentalApp.Test (EF in-memory)
+        run: dotnet test ./RentalApp.Test/RentalApp.Test.csproj -c Release -f net10.0 --no-build
+
+      # TestPostgresFixture reads TEST_DATABASE_CONNECTION; host must be `postgres` (service name).
+      - name: Run tests — StarterApp.Test (Postgres)
+        env:
+          TEST_DATABASE_CONNECTION: ${{ secrets.TEST_DATABASE_CONNECTION }}
+        run: |
+          if [ -z "$TEST_DATABASE_CONNECTION" ]; then
+            export TEST_DATABASE_CONNECTION='Host=postgres;Port=5432;Username=test_user;Password=test_password;Database=testdb'
+          fi
+          dotnet test ./StarterApp.Test/StarterApp.Test.csproj -c Release -f net10.0 --no-build
