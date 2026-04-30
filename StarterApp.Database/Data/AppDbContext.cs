@@ -13,28 +13,34 @@ public class AppDbContext : DbContext
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     { }
 
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    {
-        if (optionsBuilder.IsConfigured) return;
+ protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+     {
+         var connectionString = Environment.GetEnvironmentVariable($"ConnectionStrings__DevelopmentConnection");
 
-        var connectionString = Environment.GetEnvironmentVariable("CONNECTION_STRING");
+         if (string.IsNullOrEmpty(connectionString))
+         {
+             var assembly = Assembly.GetExecutingAssembly();
+             using var stream = assembly.GetManifestResourceStream("StarterApp.Database.appsettings.json");
 
-        if (string.IsNullOrEmpty(connectionString))
-        {
-            var a = Assembly.GetExecutingAssembly();
-            using var stream = a.GetManifestResourceStream("StarterApp.Database.appsettings.json");
+             if (stream != null)
+             {
+                 var config = new ConfigurationBuilder()
+                     .AddJsonStream(stream)
+                     .Build();
 
-            var config = new ConfigurationBuilder()
-                .AddJsonStream(stream)
-                .Build();
+                 connectionString = config.GetConnectionString("DevelopmentConnection");
+             }
+         }
 
-            connectionString = config.GetConnectionString("DevelopmentConnection");
-        }
+         if (string.IsNullOrEmpty(connectionString))
+         {
+             throw new InvalidOperationException("Database connection string is not configured.");
+         }
 
-        optionsBuilder.UseNpgsql(
-            connectionString,
-            npgsql => npgsql.MigrationsAssembly("StarterApp.Migrations"));
-    }
+         optionsBuilder.UseNpgsql(
+             connectionString,
+             o => o.MigrationsAssembly("StarterApp.Migrations")); 
+     }
 
     public DbSet<Role> Roles { get; set; }
     public DbSet<User> Users { get; set; }
