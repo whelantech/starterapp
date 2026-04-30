@@ -44,4 +44,4 @@ jobs:
         run: dotnet build ./StarterApp.sln -c Release --no-restore
 
       - name: Run tests
-        run: dotnet test ./RentalApp.Test/RentalApp.Test.csproj -c Release --no-build --no-restore
+        run: dotnet test ./StarterApp.Test/StarterApp.Test.csproj -c Release --no-build --no-restore
