@@ -60,6 +60,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IRentalService, RentalService>();
 
         builder.Services.AddDbContext<AppDbContext>();
+        builder.Services.AddScoped<GenericDbContext>(sp => sp.GetRequiredService<AppDbContext>());
 
         builder
             .UseMauiApp<App>()

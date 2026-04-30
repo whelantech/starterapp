@@ -10,10 +10,10 @@ namespace StarterApp.Database.Repositories;
 /// </summary>
 public class ItemRepository : IItemRepository
 {
-    private readonly AppDbContext _context;
+    private readonly GenericDbContext _context;
     private readonly IRepository<Category, int> _categories;
 
-    public ItemRepository(AppDbContext context, IRepository<Category, int> categories)
+    public ItemRepository(GenericDbContext context, IRepository<Category, int> categories)
     {
         _context = context;
         _categories = categories;

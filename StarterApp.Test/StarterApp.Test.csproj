@@ -5,6 +5,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+		<RootNamespace>StarterApp.Test</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,7 +21,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../StarterApp.Database/StarterApp.Database.csproj" />
+    <ProjectReference Include="../StarterApp.Migrations/StarterApp.Migrations.csproj" />
     <ProjectReference Include="../StarterApp/StarterApp.csproj" />
-</ItemGroup> 
+  </ItemGroup>
 
 </Project>
+

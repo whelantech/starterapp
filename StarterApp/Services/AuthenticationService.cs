@@ -7,13 +7,13 @@ namespace StarterApp.Services;
 
 public class AuthenticationService : IAuthenticationService
 {
-    private readonly AppDbContext _context;
+    private readonly GenericDbContext _context;
     private User? _currentUser;
     private List<string> _currentUserRoles = new();
 
     public event EventHandler<bool>? AuthenticationStateChanged;
 
-    public AuthenticationService(AppDbContext context)
+    public AuthenticationService(GenericDbContext context)
     {
         _context = context;
     }

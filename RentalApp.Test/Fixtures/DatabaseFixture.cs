@@ -6,21 +6,20 @@ using StarterApp.Database.Repositories;
 namespace RentalApp.Test.Fixtures;
 
 /// <summary>
-/// Shared in-memory <see cref="AppDbContext"/> for integration-style repository tests
-/// (model seeding from <see cref="AppDbContext"/> includes default categories; no PostgreSQL).
+/// Shared in-memory <see cref="TestAppDbContext"/> for repository tests (no PostgreSQL; isolated from <see cref="AppDbContext"/> dev data).
 /// </summary>
 public sealed class DatabaseFixture : IDisposable
 {
-    public AppDbContext Context { get; }
+    public TestAppDbContext Context { get; }
     public string DatabaseName { get; }
 
     public DatabaseFixture()
     {
         DatabaseName = "RentalAppTests_" + Guid.NewGuid();
-        var options = new DbContextOptionsBuilder<AppDbContext>()
+        var options = new DbContextOptionsBuilder<TestAppDbContext>()
             .UseInMemoryDatabase(DatabaseName)
             .Options;
-        Context = new AppDbContext(options);
+        Context = new TestAppDbContext(options);
         Context.Database.EnsureCreated();
     }
 
