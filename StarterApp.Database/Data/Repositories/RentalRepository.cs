@@ -18,9 +18,9 @@ public class RentalRepository : IRentalRepository
         RentalStatuses.Returned
     };
 
-    private readonly AppDbContext _context;
+    private readonly GenericDbContext _context;
 
-    public RentalRepository(AppDbContext context)
+    public RentalRepository(GenericDbContext context)
     {
         _context = context;
     }

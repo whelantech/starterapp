@@ -4,14 +4,14 @@ using StarterApp.Database.Data;
 namespace StarterApp.Database.Repositories;
 
 /// <summary>
-/// EF Core implementation of <see cref="IRepository{TEntity,TKey}"/> using <see cref="AppDbContext"/>.
+/// EF Core implementation of <see cref="IRepository{TEntity,TKey}"/> using <see cref="GenericDbContext"/>.
 /// </summary>
 public class EfRepository<TEntity, TKey> : IRepository<TEntity, TKey>
     where TEntity : class
 {
-    private readonly AppDbContext _context;
+    private readonly GenericDbContext _context;
 
-    public EfRepository(AppDbContext context)
+    public EfRepository(GenericDbContext context)
     {
         _context = context;
     }
