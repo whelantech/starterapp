@@ -32,16 +32,27 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "10.0"
+          dotnet-version: "10.0.x"
 
+      # MAUI: only the net10.0 TFM is built on Linux CI.
       - name: Restore workloads
-        run: dotnet workload restore ./StarterApp/StarterApp.csproj
+        run: dotnet workload restore StarterApp/StarterApp.csproj
 
       - name: Restore dependencies
-        run: dotnet restore ./StarterApp.sln
+        run: dotnet restore StarterApp.sln
 
-      - name: Build solution
-        run: dotnet build ./StarterApp.sln -c Release --no-restore
+      - name: Build solution (app, DB, migrations, test projects)
+        env:
+          ConnectionStrings__TestConnection: ${{ secrets.TestConnection_CONNECTION_STRING }}
+        run: dotnet build StarterApp.sln -c Release -f net10.0 --no-restore
 
-      - name: Run tests
-        run: dotnet test ./StarterApp.Test/StarterApp.Test.csproj -c Release --no-build --no-restore
+      # Runs RentalApp.Test (in-memory) and StarterApp.Test (Postgres smoke via ConnectionStrings__TestConnection).
+      # Use Host=postgres in the secret (service container hostname). Fallback supports forks without secrets.
+      - name: Run tests — StarterApp.sln
+        env:
+          ConnectionStrings__TestConnection: ${{ secrets.TestConnection_CONNECTION_STRING }}
+        run: |
+          if [ -z "$ConnectionStrings__TestConnection" ]; then
+            export ConnectionStrings__TestConnection='Host=postgres;Port=5432;Username=test_user;Password=test_password;Database=testdb'
+          fi
+          dotnet test StarterApp.sln -c Release -f net10.0 --no-build
