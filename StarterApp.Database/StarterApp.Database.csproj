@@ -23,7 +23,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<InternalsVisibleTo Include="RentalApp.Test" />
+		<InternalsVisibleTo Include="StarterApp.Test" />
 	</ItemGroup>
   
 </Project>

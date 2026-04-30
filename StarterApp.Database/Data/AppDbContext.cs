@@ -13,4 +13,6 @@ public class AppDbContext : GenericDbContext
     }
 
     protected override string ConnectionName => "DevelopmentConnection";
+
+    protected override bool UseConnectionStringEnvironmentOverride => true;
 }
