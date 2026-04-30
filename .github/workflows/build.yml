@@ -28,6 +28,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -41,13 +43,55 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore StarterApp.sln
 
+      - name: Install Tools
+        run: dotnet tool install --global dotnet-coverage
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: zulu
+
+      - name: Cache SonarCloud packages
+        uses: actions/cache@v4
+        with:
+          path: ~/sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
+      - name: Cache SonarCloud scanner
+        id: cache-sonar-scanner
+        uses: actions/cache@v4
+        with:
+          path: ./.sonar/scanner
+          key: ${{ runner.os }}-sonar-scanner
+          restore-keys: ${{ runner.os }}-sonar-scanner
+
+      - name: Install SonarCloud scanner
+        if: steps.cache-sonar-scanner.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p .sonar/scanner
+          dotnet tool update dotnet-sonarscanner --tool-path ./.sonar/scanner
+
+      # Repository variables: SONAR_PROJECT_KEY, SONAR_ORGANIZATION (GitHub → Settings → Secrets and variables → Actions → Variables).
+      # Secret: SONAR_TOKEN (from SonarCloud).
+      - name: Start Sonar Analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          ./.sonar/scanner/dotnet-sonarscanner begin \
+            /k:"${{ vars.SONAR_PROJECT_KEY }}" \
+            /o:"${{ vars.SONAR_ORGANIZATION }}" \
+            /d:sonar.token="${{ secrets.SONAR_TOKEN }}" \
+            /d:sonar.host.url="https://sonarcloud.io" \
+            /d:sonar.scanner.scanAll=false \
+            /d:sonar.cs.vscoveragexml.reportsPaths=coverage.xml
+
       - name: Build solution (app, DB, migrations, test projects)
         env:
           ConnectionStrings__TestConnection: ${{ secrets.TestConnection_CONNECTION_STRING }}
         run: dotnet build StarterApp.sln -c Release -f net10.0 --no-restore
 
-      # Runs StarterApp.Test (Postgres via embedded TestConnection; overridden in CI by ConnectionStrings__TestConnection during build when set).
-      # Use Host=postgres in the secret (service container hostname). Fallback supports forks without secrets.
       - name: Run tests — StarterApp.sln
         env:
           ConnectionStrings__TestConnection: ${{ secrets.TestConnection_CONNECTION_STRING }}
@@ -55,4 +99,9 @@ jobs:
           if [ -z "$ConnectionStrings__TestConnection" ]; then
             export ConnectionStrings__TestConnection='Host=postgres;Port=5432;Username=test_user;Password=test_password;Database=testdb'
           fi
-          dotnet test StarterApp.sln -c Release -f net10.0 --no-build
+          dotnet-coverage collect "dotnet test StarterApp.sln -c Release -f net10.0 --no-build" -f xml -o "coverage.xml"
+
+      - name: End Sonar Analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: ./.sonar/scanner/dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
