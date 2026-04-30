@@ -4,7 +4,8 @@ using Xunit;
 
 namespace StarterApp.Test;
 
-public class ItemViewModelTests : IClassFixture<TestPostgresFixture>
+[Collection("Postgres")]
+public class ItemViewModelTests
 {
     private readonly TestPostgresFixture _fixture;
 

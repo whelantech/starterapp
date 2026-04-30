@@ -20,12 +20,21 @@ public abstract class GenericDbContext : DbContext
     /// </summary>
     protected abstract string ConnectionName { get; }
 
+    /// <summary>
+    /// When true, the <c>CONNECTION_STRING</c> environment variable overrides named connection resolution.
+    /// <see cref="TestAppDbContext"/> keeps this false so tests always use <c>TestConnection</c> (or options passed in).
+    /// </summary>
+    protected virtual bool UseConnectionStringEnvironmentOverride => false;
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         if (optionsBuilder.IsConfigured)
             return;
 
-        var connectionString = Environment.GetEnvironmentVariable("CONNECTION_STRING");
+        string? connectionString =
+            UseConnectionStringEnvironmentOverride
+                ? Environment.GetEnvironmentVariable("CONNECTION_STRING")
+                : null;
 
         if (string.IsNullOrEmpty(connectionString))
         {
