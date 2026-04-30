@@ -1,0 +1,8 @@
+<api type="release" assembly-name="StarterApp" mvid="33beb0d452834698a22392f1bf572aed">
+  <module assembly-name="StarterApp" mvid="33beb0d452834698a22392f1bf572aed" mvid-bytes="1LC+M4NSmEaiI5Lxv1cq7Q==">
+    <types-scratch>
+      <entry key="crc640b95e6222dc6e077/MainActivity" java-name="crc640b95e6222dc6e077/MainActivity" managed-type-name="StarterApp.MainActivity" token="33554446" />
+      <entry key="crc640b95e6222dc6e077/MainApplication" java-name="crc640b95e6222dc6e077/MainApplication" managed-type-name="StarterApp.MainApplication" token="33554447" />
+    </types-scratch>
+  </module>
+</api>
