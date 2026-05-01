@@ -12,6 +12,7 @@ public interface IRentalService
     /// </summary>
     int GetInclusiveRentalDays(DateOnly start, DateOnly end);
 
+    /// <summary>Total hire cost (<paramref name="dailyRate"/> × inclusive days), using checked arithmetic.</summary>
     int ComputeTotalPrice(int dailyRate, DateOnly start, DateOnly end);
 
     /// <summary>

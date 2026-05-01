@@ -7,6 +7,9 @@ using StarterApp.Views;
 
 namespace StarterApp.ViewModels;
 
+/// <summary>
+/// Form flow for requesting a rental: loads item and borrower context, validates dates, and calls <see cref="IRentalRepository.CreateRequestAsync"/>.
+/// </summary>
 public partial class RentalRequestViewModel : BaseViewModel
 {
     private readonly IItemRepository _itemRepository;
@@ -62,6 +65,7 @@ public partial class RentalRequestViewModel : BaseViewModel
         Title = "Request rental";
     }
 
+    /// <summary>Parses <c>itemId</c> from query navigation and loads the item when valid.</summary>
     public Task ApplyQueryItemIdAsync(string? rawItemId)
     {
         if (string.IsNullOrWhiteSpace(rawItemId) || !int.TryParse(rawItemId.Trim(), out var id) || id <= 0)
@@ -76,6 +80,7 @@ public partial class RentalRequestViewModel : BaseViewModel
         return LoadAsync();
     }
 
+    /// <summary>Loads item and borrower display data and recomputes eligibility and price.</summary>
     private async Task LoadAsync()
     {
         if (!_itemId.HasValue)
@@ -140,6 +145,7 @@ public partial class RentalRequestViewModel : BaseViewModel
         OnPropertyChanged(nameof(TotalPriceFormatted));
     }
 
+    /// <summary>Recalculates estimated total from <see cref="IRentalService.ComputeTotalPrice"/> when dates or item change.</summary>
     private void RecalculatePrice()
     {
         if (_item is null)

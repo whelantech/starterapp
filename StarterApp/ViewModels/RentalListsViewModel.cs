@@ -9,6 +9,9 @@ using StarterApp.Views;
 
 namespace StarterApp.ViewModels;
 
+/// <summary>
+/// Lists rentals for the signed-in user: outgoing (as borrower) vs incoming (as owner), with navigation to detail.
+/// </summary>
 public partial class RentalListsViewModel : BaseViewModel
 {
     private readonly IRentalRepository _rentalRepository;
@@ -46,6 +49,7 @@ public partial class RentalListsViewModel : BaseViewModel
         _ = LoadAsync();
     }
 
+    /// <summary>Loads outgoing or incoming rentals from <see cref="ScopeIndex"/> and replaces <see cref="Rentals"/> on the UI thread.</summary>
     [RelayCommand]
     public async Task LoadAsync()
     {
@@ -86,6 +90,7 @@ public partial class RentalListsViewModel : BaseViewModel
         }
     }
 
+    /// <summary>Runs UI-bound collection updates on the MAUI main thread to avoid cross-thread ObservableCollection errors.</summary>
     private static Task MainThreadInvokeAsync(Action action)
     {
         if (MainThread.IsMainThread)

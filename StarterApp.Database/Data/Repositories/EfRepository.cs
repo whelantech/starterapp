@@ -67,6 +67,7 @@ public class EfRepository<TEntity, TKey> : IRepository<TEntity, TKey>
 
     private static object? GetKeyValue(TEntity entity)
     {
+        // Convention: TEntity exposes a scalar primary key property named "Id". Generic EF helpers cannot infer key metadata without IKey or EF.Core internals.
         var entry = typeof(TEntity).GetProperty("Id");
         return entry?.GetValue(entity);
     }
