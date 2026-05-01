@@ -36,6 +36,8 @@ public partial class UserDetailViewModel : INotifyPropertyChanged
     /// <summary>Authentication service for user role verification</summary>
     private readonly IAuthenticationService _authService;
 
+    private readonly IUiDialogs _uiDialogs;
+
     /// <summary>The ID of the user being edited (0 for new users)</summary>
     private int _userId;
     
@@ -85,11 +87,13 @@ public partial class UserDetailViewModel : INotifyPropertyChanged
     /// <param name="context">The database context for data operations</param>
     /// <param name="navigationService">The navigation service for page transitions</param>
     /// <param name="authService">The authentication service for role verification</param>
-    public UserDetailViewModel(AppDbContext context, INavigationService navigationService, IAuthenticationService authService)
+    /// <param name="uiDialogs">User-facing dialogs (confirm delete, etc.).</param>
+    public UserDetailViewModel(AppDbContext context, INavigationService navigationService, IAuthenticationService authService, IUiDialogs uiDialogs)
     {
         _context = context;
         _navigationService = navigationService;
         _authService = authService;
+        _uiDialogs = uiDialogs;
 
         SaveUserCommand = new Command(async () => await SaveUserAsync(), CanSaveUser);
         DeleteUserCommand = new Command(async () => await DeleteUserAsync(), CanDeleteUser);
@@ -576,13 +580,13 @@ public partial class UserDetailViewModel : INotifyPropertyChanged
     {
         if (_currentUser == null) return;
 
-        var result = await Application.Current!.MainPage!.DisplayAlert(
+        var confirmed = await _uiDialogs.DisplayConfirmAsync(
             "Confirm Delete",
             $"Are you sure you want to delete user '{_currentUser.FullName}'? This action cannot be undone.",
             "Delete",
             "Cancel");
 
-        if (!result) return;
+        if (!confirmed) return;
 
         IsLoading = true;
         try

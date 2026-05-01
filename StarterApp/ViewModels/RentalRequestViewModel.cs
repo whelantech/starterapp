@@ -17,6 +17,7 @@ public partial class RentalRequestViewModel : BaseViewModel
     private readonly IAuthenticationService _authService;
     private readonly INavigationService _navigationService;
     private readonly IRentalService _rentalService;
+    private readonly IUiDialogs _uiDialogs;
     private readonly bool _commentsPersistLocally;
 
     private int? _itemId;
@@ -53,13 +54,15 @@ public partial class RentalRequestViewModel : BaseViewModel
         IRentalRepository rentalRepository,
         IAuthenticationService authService,
         INavigationService navigationService,
-        IRentalService rentalService)
+        IRentalService rentalService,
+        IUiDialogs uiDialogs)
     {
         _itemRepository = itemRepository;
         _rentalRepository = rentalRepository;
         _authService = authService;
         _navigationService = navigationService;
         _rentalService = rentalService;
+        _uiDialogs = uiDialogs;
         _commentsPersistLocally = itemRepository is ItemRepository;
         ShowCommentsPersistHint = !_commentsPersistLocally;
         Title = "Request rental";
@@ -201,7 +204,7 @@ public partial class RentalRequestViewModel : BaseViewModel
                 end,
                 commentsToPersist);
 
-            await Application.Current!.MainPage!.DisplayAlert(
+            await _uiDialogs.DisplayInfoAsync(
                 "Rental requested",
                 "Your request was sent. You can cancel it on the next screen if you change your mind.",
                 "OK");

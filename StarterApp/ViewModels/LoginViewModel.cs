@@ -37,12 +37,6 @@ public partial class LoginViewModel : BaseViewModel
     [ObservableProperty]
     private bool rememberMe;
 
-    /// @brief Indicates whether a login operation is in progress
-    /// @details Observable property that notifies the LoginCommand when changed
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(LoginCommand))]
-    private bool _isBusy;
-
     /// @brief Default constructor for design-time support
     /// @details Sets the title to "Login"
     public LoginViewModel()
@@ -67,7 +61,7 @@ public partial class LoginViewModel : BaseViewModel
     /// @brief Performs user login authentication
     /// @details Relay command that validates input and attempts to authenticate the user
     /// @return A task representing the asynchronous login operation
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanLogin))]
     private async Task LoginAsync()
     {
         if (IsBusy)
@@ -82,6 +76,7 @@ public partial class LoginViewModel : BaseViewModel
         try
         {
             IsBusy = true;
+            LoginCommand.NotifyCanExecuteChanged();
             ClearError();
 
             var result = await _authService.LoginAsync(Email, Password);
@@ -102,8 +97,11 @@ public partial class LoginViewModel : BaseViewModel
         finally
         {
             IsBusy = false;
+            LoginCommand.NotifyCanExecuteChanged();
         }
     }
+
+    private bool CanLogin() => !IsBusy;
 
     /// @brief Navigates to the registration page
     /// @details Relay command that navigates to the user registration page

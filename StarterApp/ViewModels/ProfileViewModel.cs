@@ -21,6 +21,8 @@ public partial class ProfileViewModel : BaseViewModel
     /// @brief Navigation service for managing page navigation
     private readonly INavigationService _navigationService;
 
+    private readonly IUiDialogs _uiDialogs;
+
     /// @brief The current user's profile information
     /// @details Observable property containing the current user's data
     [ObservableProperty]
@@ -50,10 +52,11 @@ public partial class ProfileViewModel : BaseViewModel
     /// @param authService The authentication service instance
     /// @param navigationService The navigation service instance
     /// @details Sets up the required services, initializes the title, and loads user data
-    public ProfileViewModel(IAuthenticationService authService, INavigationService navigationService)
+    public ProfileViewModel(IAuthenticationService authService, INavigationService navigationService, IUiDialogs uiDialogs)
     {
         _authService = authService;
         _navigationService = navigationService;
+        _uiDialogs = uiDialogs;
         Title = "Profile";
 
         LoadUserData();
@@ -87,7 +90,7 @@ public partial class ProfileViewModel : BaseViewModel
 
             if (success)
             {
-                await Application.Current.MainPage.DisplayAlert("Success", "Password changed successfully!", "OK");
+                await _uiDialogs.DisplayInfoAsync("Success", "Password changed successfully!", "OK");
                 ClearPasswordFields();
                 IsChangingPassword = false;
             }

@@ -21,6 +21,8 @@ public partial class RegisterViewModel : BaseViewModel
     /// @brief Navigation service for managing page navigation
     private readonly INavigationService _navigationService;
 
+    private readonly IUiDialogs _uiDialogs;
+
     /// @brief The user's first name
     /// @details Observable property bound to the first name input field
     [ObservableProperty]
@@ -57,16 +59,18 @@ public partial class RegisterViewModel : BaseViewModel
     {
         // Default constructor for design time support
         Title = "Register";
+        _uiDialogs = NoOpUiDialogs.Instance;
     }
 
     /// @brief Initializes a new instance of the RegisterViewModel class
     /// @param authService The authentication service instance
     /// @param navigationService The navigation service instance
     /// @details Sets up the required services and initializes the title
-    public RegisterViewModel(IAuthenticationService authService, INavigationService navigationService)
+    public RegisterViewModel(IAuthenticationService authService, INavigationService navigationService, IUiDialogs uiDialogs)
     {
         _authService = authService;
         _navigationService = navigationService;
+        _uiDialogs = uiDialogs;
         Title = "Register";
     }
 
@@ -91,7 +95,7 @@ public partial class RegisterViewModel : BaseViewModel
 
             if (result.IsSuccess)
             {
-                await Application.Current.MainPage.DisplayAlert("Success", "Registration successful! Please login.", "OK");
+                await _uiDialogs.DisplayInfoAsync("Success", "Registration successful! Please login.", "OK");
                 await _navigationService.NavigateBackAsync();
             }
             else

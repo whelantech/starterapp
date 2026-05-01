@@ -22,6 +22,8 @@ public partial class MainViewModel : BaseViewModel
     /// @brief Navigation service for managing page navigation
     private readonly INavigationService _navigationService;
 
+    private readonly IUiDialogs _uiDialogs;
+
     /// @brief The currently authenticated user
     /// @details Observable property containing the current user's information
     [ObservableProperty]
@@ -43,16 +45,18 @@ public partial class MainViewModel : BaseViewModel
         {
             // Default constructor for design time support
             Title = "Dashboard";
+            _uiDialogs = NoOpUiDialogs.Instance;
         }
     
     /// @brief Initializes a new instance of the MainViewModel class
     /// @param authService The authentication service instance
     /// @param navigationService The navigation service instance
     /// @details Sets up the required services, initializes the title, and loads user data
-    public MainViewModel(IAuthenticationService authService, INavigationService navigationService)
+    public MainViewModel(IAuthenticationService authService, INavigationService navigationService, IUiDialogs uiDialogs)
     {
         _authService = authService;
         _navigationService = navigationService;
+        _uiDialogs = uiDialogs;
         Title = "Dashboard";
 
         LoadUserData();
@@ -77,10 +81,10 @@ public partial class MainViewModel : BaseViewModel
     [RelayCommand]
     private async Task LogoutAsync()
     {
-        var result = await Application.Current.MainPage.DisplayAlert(
-            "Logout", 
-            "Are you sure you want to logout?", 
-            "Yes", 
+        var result = await _uiDialogs.DisplayConfirmAsync(
+            "Logout",
+            "Are you sure you want to logout?",
+            "Yes",
             "No");
 
         if (result)
@@ -117,7 +121,7 @@ public partial class MainViewModel : BaseViewModel
     {
         if (!IsAdmin)
         {
-            await Application.Current.MainPage.DisplayAlert("Access Denied", "You don't have permission to access admin features.", "OK");
+            await _uiDialogs.DisplayInfoAsync("Access Denied", "You don't have permission to access admin features.", "OK");
             return;
         }
         
