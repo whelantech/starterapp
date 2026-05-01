@@ -1,0 +1,26 @@
+# StarterApp API-style reference (run from repo root: doxygen Doxyfile)
+PROJECT_NAME           = StarterApp
+# HTML ends up under ./html (matches upload-pages path in workflow).
+OUTPUT_DIRECTORY       = .
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+QUIET                  = YES
+WARN_AS_ERROR          = NO
+
+# Discover all C# sources (default Doxyfile is not recursive → empty docs)
+INPUT                  = README.md StarterApp StarterApp.Database StarterApp.Migrations StarterApp.Test
+RECURSIVE              = YES
+FILE_PATTERNS          = *.cs
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = NO
+EXTRACT_STATIC         = YES
+JAVADOC_AUTOBRIEF      = YES
+
+EXCLUDE_SYMLINKS       = YES
+EXCLUDE_PATTERNS       += */bin/*
+EXCLUDE_PATTERNS       += */obj/*
+EXCLUDE_PATTERNS       += */.git/*
+
+USE_MDFILE_AS_MAINPAGE = README.md
+
+HTML_OUTPUT            = html

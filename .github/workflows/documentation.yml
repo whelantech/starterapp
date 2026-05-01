@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - main
 
 permissions:
   pages: write
@@ -20,8 +21,7 @@ jobs:
       - name: Install Doxygen
         run: sudo apt-get update && sudo apt-get install doxygen -y
 
-      - name: Generate Doxyfile
-        run: doxygen -g Doxyfile
+      # Use committed Doxyfile (default `doxygen -g` yields "My Project" and non-recursive input → empty site).
 
       - name: Generate Doxygen Documentation
         run: doxygen Doxyfile
