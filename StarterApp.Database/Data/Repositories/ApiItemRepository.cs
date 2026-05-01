@@ -1,7 +1,4 @@
-using System.Net;
-using System.Net.Http.Json;
-using System.Text.Json;
-using System.Text.Json.Serialization;
+using StarterApp.Database.Api;
 using StarterApp.Database.Models;
 
 namespace StarterApp.Database.Repositories;
@@ -11,10 +8,7 @@ namespace StarterApp.Database.Repositories;
 /// </summary>
 public class ApiItemRepository : IItemRepository
 {
-    private readonly HttpClient _httpClient;
-
-    private const string ItemsEndpoint = "items";
-    private const string CategoriesEndpoint = "categories";
+    private readonly IApiService _api;
 
     /// <summary>
     /// Temporary stand-in coordinates until location is implemented in the app.
@@ -24,19 +18,9 @@ public class ApiItemRepository : IItemRepository
 
     private const double PlaceholderLongitude = -3.1883;
 
-
-    /// <summary>
-    /// JSON options for the API response
-    /// </summary>
-    private static readonly JsonSerializerOptions JsonOptions = new()
+    public ApiItemRepository(IApiService api)
     {
-        PropertyNameCaseInsensitive = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
-
-    public ApiItemRepository(HttpClient httpClient)
-    {
-        _httpClient = httpClient;
+        _api = api;
     }
 
     /// <inheritdoc />
@@ -60,8 +44,8 @@ public class ApiItemRepository : IItemRepository
         qs.Add($"page={page}");
         qs.Add($"pageSize={pageSize}");
 
-        var url = $"{ItemsEndpoint}?{string.Join("&", qs)}";
-        var wrapper = await _httpClient.GetFromJsonAsync<ItemsListApiResponse>(url, JsonOptions);
+        var queryString = string.Join("&", qs);
+        var wrapper = await _api.GetItemsPagedAsync(queryString);
         if (wrapper?.Items is null)
         {
             return new ItemQueryResult
@@ -88,19 +72,8 @@ public class ApiItemRepository : IItemRepository
     /// <inheritdoc />
     public async Task<Item?> GetItemByIdAsync(int id)
     {
-        using var response = await _httpClient.GetAsync($"{ItemsEndpoint}/{id}");
-        if (response.StatusCode == HttpStatusCode.NotFound)
-            return null;
-
-        if (!response.IsSuccessStatusCode)
-        {
-            var err = await response.Content.ReadFromJsonAsync<ApiErrorBody>(JsonOptions);
-            var msg = err?.Message ?? err?.Error ?? response.ReasonPhrase ?? "Request failed";
-            throw new InvalidOperationException(msg);
-        }
-
-        var dto = await response.Content.ReadFromJsonAsync<ItemDetailApiDto>(JsonOptions);
-        return dto is null ? null : MapDetailToItem(dto);
+        var (_, item) = await _api.GetItemByIdAsync(id);
+        return item is null ? null : MapDetailToItem(item);
     }
 
     /// <inheritdoc />
@@ -125,18 +98,10 @@ public class ApiItemRepository : IItemRepository
             longitude = PlaceholderLongitude
         };
 
-        using var response = await _httpClient.PostAsJsonAsync(ItemsEndpoint, requestBody, JsonOptions);
+        var (_, created, error) = await _api.PostItemAsync(requestBody);
 
-        if (!response.IsSuccessStatusCode)
-        {
-            var err = await response.Content.ReadFromJsonAsync<ApiErrorBody>(JsonOptions);
-            var msg = err?.Message ?? err?.Error ?? response.ReasonPhrase ?? "Request failed";
-            throw new InvalidOperationException(msg);
-        }
-
-        var created = await response.Content.ReadFromJsonAsync<CreateItemApiResponse>(JsonOptions);
         if (created is null)
-            throw new InvalidOperationException("Empty response from server.");
+            throw new InvalidOperationException(error ?? "Request failed");
 
         return MapToItem(created);
     }
@@ -167,25 +132,19 @@ public class ApiItemRepository : IItemRepository
             isAvailable = item.IsAvailable
         };
 
-        using var response =
-            await _httpClient.PutAsJsonAsync($"{ItemsEndpoint}/{item.Id}", requestBody, JsonOptions);
+        var (status, updated, error) = await _api.PutItemAsync(item.Id, requestBody);
 
-        if (response.StatusCode == HttpStatusCode.NotFound)
+        if (status == System.Net.HttpStatusCode.NotFound)
             return null;
 
-        if (!response.IsSuccessStatusCode)
-        {
-            var err = await response.Content.ReadFromJsonAsync<ApiErrorBody>(JsonOptions);
-            var msg = err?.Message ?? err?.Error ?? response.ReasonPhrase ?? "Request failed";
-            throw new InvalidOperationException(msg);
-        }
+        if (updated is null)
+            throw new InvalidOperationException(error ?? "Request failed");
 
-        var updated = await response.Content.ReadFromJsonAsync<ItemDetailApiDto>(JsonOptions);
-        return updated is null ? null : MapDetailToItem(updated);
+        return MapDetailToItem(updated);
     }
 
     /// <inheritdoc />
-    public async Task<bool> DeleteItemAsync(int id)
+    public Task<bool> DeleteItemAsync(int id)
     {
         throw new NotImplementedException("API integration pending");
     }
@@ -193,7 +152,7 @@ public class ApiItemRepository : IItemRepository
     /// <inheritdoc />
     public async Task<List<Category>> GetAllCategoriesAsync()
     {
-        var wrapper = await _httpClient.GetFromJsonAsync<CategoriesApiResponse>(CategoriesEndpoint, JsonOptions);
+        var wrapper = await _api.GetCategoriesAsync();
         if (wrapper?.Categories is null)
             return new List<Category>();
 
@@ -208,25 +167,25 @@ public class ApiItemRepository : IItemRepository
     }
 
     /// <inheritdoc />
-    public async Task<Category?> GetCategoryByIdAsync(int id)
+    public Task<Category?> GetCategoryByIdAsync(int id)
     {
         throw new NotImplementedException("API integration pending");
     }
 
     /// <inheritdoc />
-    public async Task<Category> CreateCategoryAsync(Category category)
+    public Task<Category> CreateCategoryAsync(Category category)
     {
         throw new NotImplementedException("API integration pending");
     }
 
     /// <inheritdoc />
-    public async Task<Category?> UpdateCategoryAsync(Category category)
+    public Task<Category?> UpdateCategoryAsync(Category category)
     {
         throw new NotImplementedException("API integration pending");
     }
 
     /// <inheritdoc />
-    public async Task<bool> DeleteCategoryAsync(int id)
+    public Task<bool> DeleteCategoryAsync(int id)
     {
         throw new NotImplementedException("API integration pending");
     }
@@ -295,63 +254,4 @@ public class ApiItemRepository : IItemRepository
             CreatedAt = dto.CreatedAt
         };
     }
-
-    private sealed record ApiErrorBody(string? Error, string? Message);
-
-    private sealed record CategoriesApiResponse(List<CategoryApiDto> Categories);
-
-    private sealed record CategoryApiDto(int Id, string Name, string? Slug, int ItemCount);
-
-    private sealed record ItemsListApiResponse(
-        List<ItemListApiDto> Items,
-        int TotalItems,
-        int Page,
-        int PageSize,
-        int TotalPages);
-
-    private sealed record ItemDetailApiDto(
-        int Id,
-        string Title,
-        string? Description,
-        decimal DailyRate,
-        int CategoryId,
-        [property: JsonPropertyName("category")] string? CategoryName,
-        int OwnerId,
-        string? OwnerName,
-        double? OwnerRating,
-        double Latitude,
-        double Longitude,
-        bool IsAvailable,
-        double? AverageRating,
-        int? TotalReviews,
-        DateTime CreatedAt);
-
-    private sealed record ItemListApiDto(
-        int Id,
-        string Title,
-        string? Description,
-        decimal DailyRate,
-        int CategoryId,
-        [property: JsonPropertyName("category")] string? CategoryName,
-        int OwnerId,
-        string? OwnerName,
-        double? OwnerRating,
-        bool IsAvailable,
-        double? AverageRating,
-        string? ImageUrl,
-        DateTime CreatedAt);
-
-    private sealed record CreateItemApiResponse(
-        int Id,
-        string Title,
-        string? Description,
-        decimal DailyRate,
-        int CategoryId,
-        [property: System.Text.Json.Serialization.JsonPropertyName("category")] string? CategoryName,
-        int OwnerId,
-        string? OwnerName,
-        double Latitude,
-        double Longitude,
-        bool IsAvailable,
-        DateTime CreatedAt);
 }

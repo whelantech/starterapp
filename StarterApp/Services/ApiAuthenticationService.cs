@@ -1,5 +1,5 @@
 using System.Net.Http.Headers;
-using System.Net.Http.Json;
+using StarterApp.Database.Api;
 using StarterApp.Database.Models;
 
 namespace StarterApp.Services;
@@ -10,6 +10,7 @@ namespace StarterApp.Services;
 public class ApiAuthenticationService : IAuthenticationService
 {
     private readonly HttpClient _httpClient;
+    private readonly IApiService _api;
     private readonly AuthTokenStoreService _tokenStore;
     private User? _currentUser;
     private readonly List<string> _currentUserRoles = new();
@@ -27,10 +28,11 @@ public class ApiAuthenticationService : IAuthenticationService
     public List<string> CurrentUserRoles => _currentUserRoles;
 
     /// <summary>Uses one shared <see cref="HttpClient"/> (Bearer header set after login) and persistent token storage.</summary>
-    public ApiAuthenticationService(HttpClient httpClient, AuthTokenStoreService tokenStore)
+    public ApiAuthenticationService(HttpClient httpClient, AuthTokenStoreService tokenStore, IApiService api)
     {
         _httpClient = httpClient;
         _tokenStore = tokenStore;
+        _api = api;
     }
 
     /// <summary>
@@ -47,25 +49,15 @@ public class ApiAuthenticationService : IAuthenticationService
         _httpClient.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", token);
 
-        var meResponse = await _httpClient.GetAsync("users/me");
+        var (status, profile, _) = await _api.GetUsersMeAsync();
 
-        if (!meResponse.IsSuccessStatusCode)
+        if ((int)status < 200 || (int)status > 299 || profile is null)
         {
             await LogoutAsync();
             return;
         }
 
-        var profile = await meResponse.Content.ReadFromJsonAsync<UserProfileResponse>();
-
-        _currentUser = new User
-        {
-            Id = profile!.Id,
-            Email = profile.Email,
-            FirstName = profile.FirstName,
-            LastName = profile.LastName,
-            CreatedAt = profile.CreatedAt,
-            IsActive = true
-        };
+        _currentUser = MapSessionUser(profile);
 
         AuthenticationStateChanged?.Invoke(this, true);
     }
@@ -75,33 +67,25 @@ public class ApiAuthenticationService : IAuthenticationService
     {
         try
         {
-            var response = await _httpClient.PostAsJsonAsync("auth/token", new { email, password });
+            var (status, tokenResponse, err) = await _api.PostAuthTokenAsync(email, password);
 
-            if (!response.IsSuccessStatusCode)
+            if ((int)status < 200 || (int)status > 299 || tokenResponse is null)
             {
-                var error = await response.Content.ReadFromJsonAsync<ApiErrorResponse>();
-                return new AuthenticationResult(false, error?.Message ?? "Login failed");
+                var msg = err?.Message ?? err?.Error ?? "Login failed";
+                return new AuthenticationResult(false, msg);
             }
 
-            var token = await response.Content.ReadFromJsonAsync<TokenResponse>();
-            
-            await _tokenStore.SaveTokenAsync(token!.Token, token.ExpiresAt);
+            await _tokenStore.SaveTokenAsync(tokenResponse.Token, tokenResponse.ExpiresAt);
 
             _httpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", token.Token);
+                new AuthenticationHeaderValue("Bearer", tokenResponse.Token);
 
-            var meResponse = await _httpClient.GetAsync("users/me");
-            var profile = await meResponse.Content.ReadFromJsonAsync<UserProfileResponse>();
+            var (meStatus, profile, _) = await _api.GetUsersMeAsync();
 
-            _currentUser = new User
-            {
-                Id = profile!.Id,
-                Email = profile.Email,
-                FirstName = profile.FirstName,
-                LastName = profile.LastName,
-                CreatedAt = profile.CreatedAt,
-                IsActive = true
-            };
+            if ((int)meStatus < 200 || (int)meStatus > 299 || profile is null)
+                return new AuthenticationResult(false, "Login failed");
+
+            _currentUser = MapSessionUser(profile);
 
             AuthenticationStateChanged?.Invoke(this, true);
             return new AuthenticationResult(true, "Login successful");
@@ -117,18 +101,13 @@ public class ApiAuthenticationService : IAuthenticationService
     {
         try
         {
-            var response = await _httpClient.PostAsJsonAsync("auth/register", new
-            {
-                firstName,
-                lastName,
-                email,
-                password
-            });
+            var request = new RegisterApiRequest(firstName, lastName, email, password);
+            var (status, err) = await _api.PostAuthRegisterAsync(request);
 
-            if (!response.IsSuccessStatusCode)
+            if ((int)status < 200 || (int)status > 299)
             {
-                var error = await response.Content.ReadFromJsonAsync<ApiErrorResponse>();
-                return new AuthenticationResult(false, error?.Message ?? "Registration failed");
+                var msg = err?.Message ?? err?.Error ?? "Registration failed";
+                return new AuthenticationResult(false, msg);
             }
 
             return new AuthenticationResult(true, "Registration successful. Please log in.");
@@ -144,7 +123,7 @@ public class ApiAuthenticationService : IAuthenticationService
     {
         _currentUser = null;
         _currentUserRoles.Clear();
-        _httpClient.DefaultRequestHeaders.Authorization = null; 
+        _httpClient.DefaultRequestHeaders.Authorization = null;
         _tokenStore.Clear();
         AuthenticationStateChanged?.Invoke(this, false);
         return Task.CompletedTask;
@@ -166,16 +145,19 @@ public class ApiAuthenticationService : IAuthenticationService
     /// <remarks>The hosted API does not expose password change; always returns <c>false</c>.</remarks>
     public Task<bool> ChangePasswordAsync(string currentPassword, string newPassword)
     {
-        // Not supported by the shared API
         return Task.FromResult(false);
     }
 
-    // --- API response DTOs ---
-
-    private record TokenResponse(string Token, DateTime ExpiresAt, int UserId);
-
-    private record UserProfileResponse(
-        int Id, string Email, string FirstName, string LastName, DateTime CreatedAt);
-
-    private record ApiErrorResponse(string Error, string Message);
+    private static User MapSessionUser(UserMeApiDto profile)
+    {
+        return new User
+        {
+            Id = profile.Id,
+            Email = profile.Email,
+            FirstName = profile.FirstName,
+            LastName = profile.LastName,
+            CreatedAt = profile.CreatedAt,
+            IsActive = true
+        };
+    }
 }

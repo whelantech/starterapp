@@ -1,5 +1,5 @@
-using System.Net.Http.Json;
-using System.Text.Json;
+using System.Net;
+using StarterApp.Database.Api;
 using StarterApp.Database.Models;
 
 namespace StarterApp.Database.Repositories;
@@ -9,57 +9,32 @@ namespace StarterApp.Database.Repositories;
 /// </summary>
 public class ApiUserRepository
 {
-    private readonly HttpClient _httpClient;
+    private readonly IApiService _api;
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
+    public ApiUserRepository(IApiService api)
     {
-        PropertyNameCaseInsensitive = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
-
-    public ApiUserRepository(HttpClient httpClient)
-    {
-        _httpClient = httpClient;
+        _api = api;
     }
 
     /// <summary>Fetches the authenticated user from <c>GET users/me</c> using the client’s Bearer token.</summary>
     /// <remarks>Throws <see cref="UnauthorizedAccessException"/> or <see cref="InvalidOperationException"/> on failure; does not return null on error.</remarks>
     public async Task<User?> GetCurrentUserAsync()
     {
-        using var response = await _httpClient.GetAsync("users/me");
+        var (status, dto, rawError) = await _api.GetUsersMeAsync();
 
-        if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        if (status == HttpStatusCode.Unauthorized)
             throw new UnauthorizedAccessException("User is not authenticated");
 
-        if (!response.IsSuccessStatusCode)
+        if ((int)status < 200 || (int)status > 299 || dto is null)
         {
-            var error = await response.Content.ReadAsStringAsync();
+            var error = rawError ?? "Unknown error";
             throw new InvalidOperationException($"API error: {error}");
         }
-
-        var dto = await response.Content.ReadFromJsonAsync<UserApiDto>(JsonOptions);
-
-        if (dto == null)
-            throw new InvalidOperationException("Failed to parse user response");
 
         return MapToUser(dto);
     }
 
-    private sealed record UserApiDto(
-        int Id,
-        string Email,
-        string FirstName,
-        string LastName,
-        int? AverageRating,
-        int? ItemsListed,
-        int? RentalsCompleted,
-        DateTime CreatedAt,
-        DateTime UpdatedAt,
-        DateTime DeletedAt,
-        bool IsActive
-    );
-
-    private static User MapToUser(UserApiDto dto)
+    private static User MapToUser(UserMeApiDto dto)
     {
         return new User
         {

@@ -5,6 +5,7 @@ using StarterApp.ViewModels;
 using StarterApp.Database.Data;
 using StarterApp.Database.Models;
 using StarterApp.Views;
+using StarterApp.Database.Api;
 using StarterApp.Database.Repositories;
 using StarterApp.Services;
 
@@ -37,6 +38,7 @@ public static class MauiProgram
                 client.DefaultRequestHeaders.Add("Accept", "application/json");
                 return client;
             });
+            builder.Services.AddSingleton<IApiService, ApiService>();
             builder.Services.AddSingleton<IItemRepository, ApiItemRepository>();
             builder.Services.AddSingleton<IRentalRepository, ApiRentalRepository>();
             builder.Services.AddSingleton<ApiUserRepository>();

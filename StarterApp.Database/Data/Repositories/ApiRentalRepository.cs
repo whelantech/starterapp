@@ -1,7 +1,5 @@
 using System.Net;
-using System.Net.Http.Json;
-using System.Text.Json;
-using System.Text.Json.Serialization;
+using StarterApp.Database.Api;
 using StarterApp.Database.Models;
 
 namespace StarterApp.Database.Repositories;
@@ -11,19 +9,11 @@ namespace StarterApp.Database.Repositories;
 /// </summary>
 public class ApiRentalRepository : IRentalRepository
 {
-    private readonly HttpClient _httpClient;
+    private readonly IApiService _api;
 
-    private const string RentalsEndpoint = "rentals";
-
-    private static readonly JsonSerializerOptions JsonOptions = new()
+    public ApiRentalRepository(IApiService api)
     {
-        PropertyNameCaseInsensitive = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
-
-    public ApiRentalRepository(HttpClient httpClient)
-    {
-        _httpClient = httpClient;
+        _api = api;
     }
 
     /// <inheritdoc />
@@ -48,23 +38,13 @@ public class ApiRentalRepository : IRentalRepository
             endDate = end.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)
         };
 
-        using var response = await _httpClient.PostAsJsonAsync(RentalsEndpoint, body, JsonOptions, cancellationToken);
+        var (status, created, error) = await _api.PostRentalAsync(body, cancellationToken);
 
-        if (response.StatusCode == HttpStatusCode.BadRequest)
-        {
-            var err = await ReadErrorAsync(response, cancellationToken);
-            throw new InvalidOperationException(err ?? "Could not create rental.");
-        }
+        if (status == HttpStatusCode.BadRequest)
+            throw new InvalidOperationException(error ?? "Could not create rental.");
 
-        if (!response.IsSuccessStatusCode)
-        {
-            var err = await ReadErrorAsync(response, cancellationToken);
-            throw new InvalidOperationException(err ?? response.ReasonPhrase ?? "Could not create rental.");
-        }
-
-        var created = await response.Content.ReadFromJsonAsync<RentalCreateApiDto>(JsonOptions, cancellationToken);
         if (created is null)
-            throw new InvalidOperationException("Empty response from server.");
+            throw new InvalidOperationException(error ?? "Could not create rental.");
 
         return MapFromCreate(created);
     }
@@ -76,8 +56,7 @@ public class ApiRentalRepository : IRentalRepository
         CancellationToken cancellationToken = default)
     {
         _ = ownerUserId;
-        var url = BuildListUrl("incoming", statusFilter);
-        return await GetRentalListAsync(url, cancellationToken);
+        return await GetRentalListAsync("incoming", statusFilter, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -87,69 +66,46 @@ public class ApiRentalRepository : IRentalRepository
         CancellationToken cancellationToken = default)
     {
         _ = borrowerUserId;
-        var url = BuildListUrl("outgoing", statusFilter);
-        return await GetRentalListAsync(url, cancellationToken);
+        return await GetRentalListAsync("outgoing", statusFilter, cancellationToken);
     }
 
-    private async Task<IReadOnlyList<Rental>> GetRentalListAsync(string url, CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<Rental>> GetRentalListAsync(
+        string segment,
+        string? statusFilter,
+        CancellationToken cancellationToken)
     {
-        using var response = await _httpClient.GetAsync(url, cancellationToken);
-        if (response.StatusCode == HttpStatusCode.Unauthorized)
+        var (status, wrapper, error) = await _api.GetRentalsListAsync(segment, statusFilter, cancellationToken);
+
+        if (status == HttpStatusCode.Unauthorized)
             throw new UnauthorizedAccessException("Sign in again to load rentals.");
 
-        if (!response.IsSuccessStatusCode)
-        {
-            var err = await ReadErrorAsync(response, cancellationToken);
-            throw new InvalidOperationException(err ?? $"Could not load rentals ({(int)response.StatusCode}).");
-        }
+        if (status != HttpStatusCode.OK)
+            throw new InvalidOperationException(error ?? $"Could not load rentals ({(int)status}).");
 
-        var json = await response.Content.ReadAsStringAsync(cancellationToken);
-        if (string.IsNullOrWhiteSpace(json))
+        if (wrapper?.Rentals is null || wrapper.Rentals.Count == 0)
             return Array.Empty<Rental>();
 
-        try
+        var list = new List<Rental>();
+        foreach (var dto in wrapper.Rentals)
         {
-            var wrapper = JsonSerializer.Deserialize<RentalsListApiDto>(json, JsonOptions);
-            if (wrapper?.Rentals is null || wrapper.Rentals.Count == 0)
-                return Array.Empty<Rental>();
-
-            var list = new List<Rental>();
-            foreach (var dto in wrapper.Rentals)
+            try
             {
-                try
-                {
-                    list.Add(MapFromListItemSafe(dto));
-                }
-                catch
-                {
-                    // Skip malformed rows instead of failing the whole list.
-                }
+                list.Add(MapFromListItemSafe(dto));
             }
+            catch
+            {
+                // Skip malformed rows instead of failing the whole list.
+            }
+        }
 
-            return list;
-        }
-        catch (JsonException ex)
-        {
-            throw new InvalidOperationException("Could not parse rentals from the server.", ex);
-        }
+        return list;
     }
 
     /// <inheritdoc />
     public async Task<Rental?> GetByIdAsync(int rentalId, int currentUserId, CancellationToken cancellationToken = default)
     {
         _ = currentUserId;
-        using var response = await _httpClient.GetAsync($"{RentalsEndpoint}/{rentalId}", cancellationToken);
-        if (response.StatusCode == HttpStatusCode.NotFound)
-            return null;
-        if (response.StatusCode == HttpStatusCode.Forbidden || response.StatusCode == HttpStatusCode.Unauthorized)
-            return null;
-        if (!response.IsSuccessStatusCode)
-        {
-            var err = await ReadErrorAsync(response, cancellationToken);
-            throw new InvalidOperationException(err ?? "Could not load rental.");
-        }
-
-        var dto = await response.Content.ReadFromJsonAsync<RentalDetailApiDto>(JsonOptions, cancellationToken);
+        var (_, dto) = await _api.GetRentalByIdAsync(rentalId, cancellationToken);
         return dto is null ? null : MapFromDetail(dto);
     }
 
@@ -161,16 +117,12 @@ public class ApiRentalRepository : IRentalRepository
         CancellationToken cancellationToken = default)
     {
         _ = actingUserId;
-        var status = RentalTransitionApiMapper.ToApiStatus(transition);
-        var body = new { status };
-        using var response =
-            await _httpClient.PatchAsJsonAsync($"{RentalsEndpoint}/{rentalId}/status", body, JsonOptions, cancellationToken);
+        var newStatus = RentalTransitionApiMapper.ToApiStatus(transition);
+        var body = new { status = newStatus };
+        var (httpStatus, error) = await _api.PatchRentalStatusAsync(rentalId, body, cancellationToken);
 
-        if (!response.IsSuccessStatusCode)
-        {
-            var err = await ReadErrorAsync(response, cancellationToken);
-            throw new InvalidOperationException(err ?? "Could not update rental status.");
-        }
+        if ((int)httpStatus < 200 || (int)httpStatus > 299)
+            throw new InvalidOperationException(error ?? "Could not update rental status.");
     }
 
     /// <inheritdoc />
@@ -182,14 +134,6 @@ public class ApiRentalRepository : IRentalRepository
     {
         var transition = RentalTransitionParser.FromNewStatusString(newStatus);
         return TransitionAsync(rentalId, actingUserId, transition, cancellationToken);
-    }
-
-    private static string BuildListUrl(string segment, string? statusFilter)
-    {
-        var path = $"{RentalsEndpoint}/{segment}";
-        if (string.IsNullOrWhiteSpace(statusFilter))
-            return path;
-        return $"{path}?status={Uri.EscapeDataString(statusFilter.Trim())}";
     }
 
     private static Rental MapFromCreate(RentalCreateApiDto dto)
@@ -284,66 +228,4 @@ public class ApiRentalRepository : IRentalRepository
             return RentalStatuses.Pending;
         return s.Trim();
     }
-
-    private static async Task<string?> ReadErrorAsync(HttpResponseMessage response, CancellationToken cancellationToken)
-    {
-        try
-        {
-            var err = await response.Content.ReadFromJsonAsync<ApiErrorBody>(JsonOptions, cancellationToken);
-            return err?.Message ?? err?.Error;
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private sealed record ApiErrorBody(string? Error, string? Message);
-
-    private sealed record RentalCreateApiDto(
-        int Id,
-        int ItemId,
-        string ItemTitle,
-        int BorrowerId,
-        string BorrowerName,
-        int OwnerId,
-        string OwnerName,
-        string StartDate,
-        string EndDate,
-        string Status,
-        decimal TotalPrice,
-        DateTime CreatedAt);
-
-    private sealed record RentalsListApiDto(List<RentalListItemApiDto>? Rentals, int TotalRentals);
-
-    /// <summary>Loose shape so API additions/optionals do not break deserialization.</summary>
-    private sealed record RentalListItemApiDto(
-        int Id,
-        int ItemId,
-        string? ItemTitle,
-        int BorrowerId,
-        string? BorrowerName,
-        int OwnerId,
-        string? OwnerName,
-        string? StartDate,
-        string? EndDate,
-        string? Status,
-        decimal? TotalPrice,
-        DateTime? CreatedAt);
-
-    private sealed record RentalDetailApiDto(
-        int Id,
-        int ItemId,
-        string ItemTitle,
-        string? ItemDescription,
-        int BorrowerId,
-        string BorrowerName,
-        int OwnerId,
-        string OwnerName,
-        string StartDate,
-        string EndDate,
-        string Status,
-        decimal TotalPrice,
-        DateTime RequestedAt,
-        string? Comments = null);
 }
