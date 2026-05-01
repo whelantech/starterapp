@@ -1,20 +1,21 @@
 using StarterApp.Database.Models;
+using StarterApp.Database.Workflow;
 
 namespace StarterApp.Database.States;
 
 public sealed class RequestedState : IRentalState
 {
-    public string StateName => RentalStatuses.Pending;
+    public string StateName => RentalStatusValues.Requested;
 
     public Task<IRentalState> Approve(Rental rental)
     {
-        rental.Status = RentalStatuses.Approved;
+        rental.Status = RentalStatusValues.Approved;
         return Task.FromResult<IRentalState>(new ApprovedState());
     }
 
     public Task<IRentalState> Reject(Rental rental)
     {
-        rental.Status = RentalStatuses.Rejected;
+        rental.Status = RentalStatusValues.Rejected;
         return Task.FromResult<IRentalState>(new RejectedState());
     }
 
@@ -29,7 +30,7 @@ public sealed class RequestedState : IRentalState
 
     public Task<IRentalState> Cancel(Rental rental)
     {
-        rental.Status = RentalStatuses.Cancelled;
+        rental.Status = RentalStatusValues.Cancelled;
         return Task.FromResult<IRentalState>(new CancelledState());
     }
 }

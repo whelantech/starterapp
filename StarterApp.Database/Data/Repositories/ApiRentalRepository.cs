@@ -1,6 +1,7 @@
 using System.Net;
 using StarterApp.Database.Api;
 using StarterApp.Database.Models;
+using StarterApp.Database.Workflow;
 
 namespace StarterApp.Database.Repositories;
 
@@ -10,10 +11,12 @@ namespace StarterApp.Database.Repositories;
 public class ApiRentalRepository : IRentalRepository
 {
     private readonly IApiService _api;
+    private readonly IRentalWorkflowPolicy _workflowPolicy;
 
-    public ApiRentalRepository(IApiService api)
+    public ApiRentalRepository(IApiService api, IRentalWorkflowPolicy workflowPolicy)
     {
         _api = api;
+        _workflowPolicy = workflowPolicy;
     }
 
     /// <inheritdoc />
@@ -42,6 +45,10 @@ public class ApiRentalRepository : IRentalRepository
 
         if (status == HttpStatusCode.BadRequest)
             throw new InvalidOperationException(error ?? "Could not create rental.");
+
+        if (status == HttpStatusCode.Conflict)
+            throw new InvalidOperationException(
+                error ?? "This item already has an approved rental for these dates.");
 
         if (created is null)
             throw new InvalidOperationException(error ?? "Could not create rental.");
@@ -116,10 +123,18 @@ public class ApiRentalRepository : IRentalRepository
         RentalTransition transition,
         CancellationToken cancellationToken = default)
     {
-        _ = actingUserId;
-        var newStatus = RentalTransitionApiMapper.ToApiStatus(transition);
+        var rental = await GetByIdAsync(rentalId, actingUserId, cancellationToken).ConfigureAwait(false);
+        if (rental is null)
+            throw new InvalidOperationException("Rental not found.");
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var (allowed, reason) = _workflowPolicy.CanTransition(rental, actingUserId, transition, today);
+        if (!allowed)
+            throw new InvalidOperationException(reason);
+
+        var newStatus = RentalTransitionApiMapper.ToApiStatus(_workflowPolicy, transition);
         var body = new { status = newStatus };
-        var (httpStatus, error) = await _api.PatchRentalStatusAsync(rentalId, body, cancellationToken);
+        var (httpStatus, error) = await _api.PatchRentalStatusAsync(rentalId, body, cancellationToken).ConfigureAwait(false);
 
         if ((int)httpStatus < 200 || (int)httpStatus > 299)
             throw new InvalidOperationException(error ?? "Could not update rental status.");
@@ -149,7 +164,7 @@ public class ApiRentalRepository : IRentalRepository
             OwnerName = dto.OwnerName,
             StartDate = ParseDateOnly(dto.StartDate),
             EndDate = ParseDateOnly(dto.EndDate),
-            Status = NormalizeStatus(dto.Status),
+            Status = RentalStatusNormalizer.Normalize(dto.Status),
             TotalPrice = (int)Math.Round(dto.TotalPrice, MidpointRounding.AwayFromZero),
             CreatedAt = dto.CreatedAt,
             Comments = null
@@ -169,7 +184,7 @@ public class ApiRentalRepository : IRentalRepository
             OwnerName = dto.OwnerName ?? string.Empty,
             StartDate = ParseDateOnlySafe(dto.StartDate),
             EndDate = ParseDateOnlySafe(dto.EndDate),
-            Status = NormalizeStatus(dto.Status),
+            Status = RentalStatusNormalizer.Normalize(dto.Status),
             TotalPrice = dto.TotalPrice is null
                 ? 0
                 : (int)Math.Round(dto.TotalPrice.Value, MidpointRounding.AwayFromZero),
@@ -191,7 +206,7 @@ public class ApiRentalRepository : IRentalRepository
             OwnerName = dto.OwnerName,
             StartDate = ParseDateOnly(dto.StartDate),
             EndDate = ParseDateOnly(dto.EndDate),
-            Status = NormalizeStatus(dto.Status),
+            Status = RentalStatusNormalizer.Normalize(dto.Status),
             TotalPrice = (int)Math.Round(dto.TotalPrice, MidpointRounding.AwayFromZero),
             RequestedAt = dto.RequestedAt,
             CreatedAt = dto.RequestedAt,
@@ -220,12 +235,5 @@ public class ApiRentalRepository : IRentalRepository
         {
             return DateOnly.FromDateTime(DateTime.UtcNow);
         }
-    }
-
-    private static string NormalizeStatus(string? s)
-    {
-        if (string.IsNullOrWhiteSpace(s))
-            return RentalStatuses.Pending;
-        return s.Trim();
     }
 }

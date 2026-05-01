@@ -100,6 +100,13 @@
                                 Command="{Binding CancelAsBorrowerCommand}" />
                     </VerticalStackLayout>
 
+                    <VerticalStackLayout Spacing="8" IsVisible="{Binding ShowBorrowerWithdrawUnavailableHint}">
+                        <Label Text="The shared API does not support withdrawing a request. Ask the owner to reject it, or wait for a response."
+                               FontSize="12"
+                               LineBreakMode="WordWrap"
+                               TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray400}}" />
+                    </VerticalStackLayout>
+
                     <VerticalStackLayout Spacing="8" IsVisible="{Binding ShowOwnerApprovedBeforeStart}">
                         <Label Text="The rental period has not started yet. You can mark this listing as out for rent on or after the start date."
                                FontSize="12"
@@ -115,9 +122,10 @@
                                 HorizontalOptions="Fill" />
                     </VerticalStackLayout>
 
-                    <VerticalStackLayout Spacing="8" IsVisible="{Binding ShowOwnerReturn}">
-                        <Label Text="Mark the item as returned when the borrower brings it back."
+                    <VerticalStackLayout Spacing="8" IsVisible="{Binding ShowBorrowerReturn}">
+                        <Label Text="Mark the item as returned when you have given it back to the owner."
                                FontSize="12"
+                               LineBreakMode="WordWrap"
                                TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray400}}" />
                         <Button Text="Mark returned"
                                 Command="{Binding ReturnCommand}"

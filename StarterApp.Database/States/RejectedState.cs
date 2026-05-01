@@ -1,10 +1,11 @@
 using StarterApp.Database.Models;
+using StarterApp.Database.Workflow;
 
 namespace StarterApp.Database.States;
 
 public sealed class RejectedState : IRentalState
 {
-    public string StateName => RentalStatuses.Rejected;
+    public string StateName => RentalStatusValues.Rejected;
 
     public Task<IRentalState> Approve(Rental rental) =>
         Task.FromException<IRentalState>(new InvalidOperationException("Rental was rejected."));

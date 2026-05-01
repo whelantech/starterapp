@@ -1,21 +1,21 @@
 using StarterApp.Database.Models;
+using StarterApp.Database.Workflow;
 
 namespace StarterApp.Database.Repositories;
 
-/// <summary>
-/// Maps transitions to PATCH body status strings for the shared API (PascalCase literals).
-/// </summary>
+/// <summary>Maps transitions to PATCH body status strings for the shared API.</summary>
 public static class RentalTransitionApiMapper
 {
-    public static string ToApiStatus(RentalTransition transition) =>
-        transition switch
+    /// <inheritdoc cref="IRentalWorkflowPolicy.GetApiPatchStatus"/>
+    public static string ToApiStatus(IRentalWorkflowPolicy policy, RentalTransition transition)
+    {
+        var s = policy.GetApiPatchStatus(transition);
+        if (s is null)
         {
-            RentalTransition.Approve => RentalStatuses.Approved,
-            RentalTransition.Reject => RentalStatuses.Rejected,
-            RentalTransition.Cancel => RentalStatuses.Cancelled,
-            RentalTransition.StartRental => RentalStatuses.OutForRent,
-            RentalTransition.Return => RentalStatuses.Returned,
-            RentalTransition.Complete => RentalStatuses.Completed,
-            _ => throw new ArgumentOutOfRangeException(nameof(transition), transition, null)
-        };
+            throw new InvalidOperationException(
+                $"Transition {transition} cannot be expressed as an API status update.");
+        }
+
+        return s;
+    }
 }

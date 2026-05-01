@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
+using StarterApp.Database.Workflow;
 
 namespace StarterApp.Database.Models;
 
@@ -32,7 +33,7 @@ public class Rental
 
     [Required]
     [MaxLength(50)]
-    public string Status { get; set; } = RentalStatuses.Pending;
+    public string Status { get; set; } = RentalStatusValues.Requested;
 
     public int TotalPrice { get; set; }
 

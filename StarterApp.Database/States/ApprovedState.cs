@@ -1,10 +1,11 @@
 using StarterApp.Database.Models;
+using StarterApp.Database.Workflow;
 
 namespace StarterApp.Database.States;
 
 public sealed class ApprovedState : IRentalState
 {
-    public string StateName => RentalStatuses.Approved;
+    public string StateName => RentalStatusValues.Approved;
 
     public Task<IRentalState> Approve(Rental rental) =>
         Task.FromException<IRentalState>(new InvalidOperationException("Rental is already approved."));
@@ -19,7 +20,7 @@ public sealed class ApprovedState : IRentalState
             return Task.FromException<IRentalState>(new InvalidOperationException(
                 $"Rental cannot start before {rental.StartDate:yyyy-MM-dd}."));
 
-        rental.Status = RentalStatuses.OutForRent;
+        rental.Status = RentalStatusValues.OutForRent;
         return Task.FromResult<IRentalState>(new OutForRentState());
     }
 

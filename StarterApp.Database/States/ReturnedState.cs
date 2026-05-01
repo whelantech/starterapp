@@ -1,10 +1,11 @@
 using StarterApp.Database.Models;
+using StarterApp.Database.Workflow;
 
 namespace StarterApp.Database.States;
 
 public sealed class ReturnedState : IRentalState
 {
-    public string StateName => RentalStatuses.Returned;
+    public string StateName => RentalStatusValues.Returned;
 
     public Task<IRentalState> Approve(Rental rental) =>
         Task.FromException<IRentalState>(new InvalidOperationException("Rental is already past approval."));
@@ -20,7 +21,7 @@ public sealed class ReturnedState : IRentalState
 
     public Task<IRentalState> Complete(Rental rental)
     {
-        rental.Status = RentalStatuses.Completed;
+        rental.Status = RentalStatusValues.Completed;
         return Task.FromResult<IRentalState>(new CompletedState());
     }
 

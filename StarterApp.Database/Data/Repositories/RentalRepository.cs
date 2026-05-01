@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using StarterApp.Database.Data;
 using StarterApp.Database.Models;
 using StarterApp.Database.States;
+using StarterApp.Database.Workflow;
 
 namespace StarterApp.Database.Repositories;
 
@@ -10,19 +11,25 @@ namespace StarterApp.Database.Repositories;
 /// </summary>
 public class RentalRepository : IRentalRepository
 {
+    /// <summary>Legacy and standard statuses stored in PostgreSQL that block overlapping bookings.</summary>
     private static readonly string[] OverlapBlockingStatuses =
-    {
+    [
+        RentalStatusValues.Requested,
         RentalStatuses.Pending,
-        RentalStatuses.Approved,
+        RentalStatusValues.Approved,
+        RentalStatusValues.OutForRent,
         RentalStatuses.OutForRent,
-        RentalStatuses.Returned
-    };
+        RentalStatusValues.Overdue,
+        RentalStatusValues.Returned
+    ];
 
     private readonly GenericDbContext _context;
+    private readonly IRentalWorkflowPolicy _workflowPolicy;
 
-    public RentalRepository(GenericDbContext context)
+    public RentalRepository(GenericDbContext context, IRentalWorkflowPolicy workflowPolicy)
     {
         _context = context;
+        _workflowPolicy = workflowPolicy;
     }
 
     /// <inheritdoc />
@@ -63,7 +70,7 @@ public class RentalRepository : IRentalRepository
             BorrowerUserId = borrowerUserId,
             StartDate = start,
             EndDate = end,
-            Status = RentalStatuses.Pending,
+            Status = RentalStatusValues.Requested,
             TotalPrice = totalPrice,
             Comments = string.IsNullOrWhiteSpace(comments) ? null : comments.Trim(),
             CreatedAt = DateTime.UtcNow
@@ -185,48 +192,49 @@ public class RentalRepository : IRentalRepository
 
         var state = RentalStateFactory.FromStatus(rental.Status);
 
+        var (allowed, reason) = _workflowPolicy.CanTransition(
+            rental,
+            actingUserId,
+            transition,
+            DateOnly.FromDateTime(DateTime.UtcNow));
+
+        if (!allowed)
+            throw new InvalidOperationException(reason);
+
+        if (transition == RentalTransition.Approve)
+        {
+            if (await HasBlockingOverlapAsync(
+                    rental.ItemId,
+                    rental.StartDate,
+                    rental.EndDate,
+                    excludeRentalId: rental.Id,
+                    cancellationToken))
+                throw new InvalidOperationException("Those dates overlap an existing rental for this item.");
+        }
+
         switch (transition)
         {
             case RentalTransition.Approve:
-                if (!isOwner)
-                    throw new UnauthorizedAccessException("Only the owner can approve.");
-                if (await HasBlockingOverlapAsync(
-                        rental.ItemId,
-                        rental.StartDate,
-                        rental.EndDate,
-                        excludeRentalId: rental.Id,
-                        cancellationToken))
-                    throw new InvalidOperationException("Those dates overlap an existing rental for this item.");
                 await InvokeStateAsync(state, s => s.Approve(rental)).ConfigureAwait(false);
                 break;
 
             case RentalTransition.Reject:
-                if (!isOwner)
-                    throw new UnauthorizedAccessException("Only the owner can reject.");
                 await InvokeStateAsync(state, s => s.Reject(rental)).ConfigureAwait(false);
                 break;
 
             case RentalTransition.Cancel:
-                if (!isBorrower)
-                    throw new UnauthorizedAccessException("Only the borrower can cancel a pending request.");
                 await InvokeStateAsync(state, s => s.Cancel(rental)).ConfigureAwait(false);
                 break;
 
             case RentalTransition.StartRental:
-                if (!isOwner)
-                    throw new UnauthorizedAccessException("Only the owner can start the rental.");
                 await InvokeStateAsync(state, s => s.StartRental(rental)).ConfigureAwait(false);
                 break;
 
             case RentalTransition.Return:
-                if (!isOwner)
-                    throw new UnauthorizedAccessException("Only the owner can mark the item returned.");
                 await InvokeStateAsync(state, s => s.Return(rental)).ConfigureAwait(false);
                 break;
 
             case RentalTransition.Complete:
-                if (!isOwner)
-                    throw new UnauthorizedAccessException("Only the owner can complete the rental.");
                 await InvokeStateAsync(state, s => s.Complete(rental)).ConfigureAwait(false);
                 break;
 

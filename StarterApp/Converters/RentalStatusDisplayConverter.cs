@@ -1,5 +1,6 @@
 using System.Globalization;
 using StarterApp.Database.Models;
+using StarterApp.Database.Workflow;
 
 namespace StarterApp.Converters;
 
@@ -15,21 +16,18 @@ public sealed class RentalStatusDisplayConverter : IValueConverter
     {
         if (string.IsNullOrWhiteSpace(status))
             return string.Empty;
-        if (status.Equals(RentalStatuses.Pending, StringComparison.OrdinalIgnoreCase))
-            return "Requested";
-        if (status.Equals(RentalStatuses.Approved, StringComparison.OrdinalIgnoreCase))
-            return "Approved";
-        if (status.Equals(RentalStatuses.Rejected, StringComparison.OrdinalIgnoreCase))
-            return "Rejected";
-        if (status.Equals(RentalStatuses.OutForRent, StringComparison.OrdinalIgnoreCase))
-            return "Out for rent";
-        if (status.Equals(RentalStatuses.Returned, StringComparison.OrdinalIgnoreCase))
-            return "Returned";
-        if (status.Equals(RentalStatuses.Completed, StringComparison.OrdinalIgnoreCase))
-            return "Completed";
-        if (status.Equals(RentalStatuses.Cancelled, StringComparison.OrdinalIgnoreCase) ||
-            status.Equals("canceled", StringComparison.OrdinalIgnoreCase))
-            return "Cancelled";
-        return status.Trim();
+
+        return RentalStatusNormalizer.Normalize(status) switch
+        {
+            RentalStatusValues.Requested => "Requested",
+            RentalStatusValues.Approved => "Approved",
+            RentalStatusValues.Rejected => "Rejected",
+            RentalStatusValues.OutForRent => "Out for rent",
+            RentalStatusValues.Overdue => "Overdue",
+            RentalStatusValues.Returned => "Returned",
+            RentalStatusValues.Completed => "Completed",
+            RentalStatusValues.Cancelled => "Cancelled",
+            var other => other.Trim()
+        };
     }
 }

@@ -1,10 +1,11 @@
 using StarterApp.Database.Models;
+using StarterApp.Database.Workflow;
 
 namespace StarterApp.Database.States;
 
 public sealed class CancelledState : IRentalState
 {
-    public string StateName => RentalStatuses.Cancelled;
+    public string StateName => RentalStatusValues.Cancelled;
 
     public Task<IRentalState> Approve(Rental rental) =>
         Task.FromException<IRentalState>(new InvalidOperationException("Rental was cancelled."));

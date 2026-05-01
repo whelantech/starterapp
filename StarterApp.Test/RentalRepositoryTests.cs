@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using StarterApp.Database.Data;
 using StarterApp.Database.Models;
 using StarterApp.Database.Repositories;
+using StarterApp.Database.Workflow;
 using Xunit;
 
 namespace StarterApp.Test;
@@ -25,7 +26,7 @@ public class RentalRepositoryTests : IClassFixture<RentalRepositoryTests.Fixture
 
         Assert.NotNull(rental);
         Assert.Equal(_fixture.SeededItemId, rental!.ItemId);
-        Assert.Equal(RentalStatuses.Pending, rental.Status);
+        Assert.Equal(RentalStatusValues.Requested, rental.Status);
     }
 
     /// <summary>
@@ -51,7 +52,8 @@ public class RentalRepositoryTests : IClassFixture<RentalRepositoryTests.Fixture
             Seed();
         }
 
-        public RentalRepository CreateRentalRepository() => new(Context);
+        public RentalRepository CreateRentalRepository() =>
+            new(Context, new RentalWorkflowPolicy(remoteApiMode: false));
 
         private static AppDbContext CreateContext()
         {
@@ -137,7 +139,7 @@ public class RentalRepositoryTests : IClassFixture<RentalRepositoryTests.Fixture
                 BorrowerUserId = borrower.Id,
                 StartDate = new DateOnly(2026, 5, 1),
                 EndDate = new DateOnly(2026, 5, 3),
-                Status = RentalStatuses.Pending,
+                Status = RentalStatusValues.Requested,
                 TotalPrice = 30,
                 CreatedAt = DateTime.UtcNow
             };

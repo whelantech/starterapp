@@ -3,9 +3,10 @@ using StarterApp.Database.Workflow;
 
 namespace StarterApp.Database.States;
 
-public sealed class OutForRentState : IRentalState
+/// <summary>Borrower can mark returned (same as <see cref="OutForRentState"/> for this workflow).</summary>
+public sealed class OverdueState : IRentalState
 {
-    public string StateName => RentalStatusValues.OutForRent;
+    public string StateName => RentalStatusValues.Overdue;
 
     public Task<IRentalState> Approve(Rental rental) =>
         Task.FromException<IRentalState>(new InvalidOperationException("Rental is already active."));

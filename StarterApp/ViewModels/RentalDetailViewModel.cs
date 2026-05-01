@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using StarterApp.Converters;
 using StarterApp.Database.Models;
 using StarterApp.Database.Repositories;
+using StarterApp.Database.Workflow;
 using StarterApp.Services;
 
 namespace StarterApp.ViewModels;
@@ -13,6 +14,7 @@ public partial class RentalDetailViewModel : BaseViewModel
     private readonly IRentalRepository _rentalRepository;
     private readonly IAuthenticationService _authService;
     private readonly INavigationService _navigationService;
+    private readonly IRentalWorkflowPolicy _workflowPolicy;
 
     private int? _currentRentalId;
 
@@ -52,47 +54,67 @@ public partial class RentalDetailViewModel : BaseViewModel
 
     public bool ShowOwnerActions =>
         Rental is not null
-        && IsPendingLike(Rental.Status)
-        && _authService.CurrentUser?.Id == Rental.OwnerId;
+        && _authService.CurrentUser?.Id == Rental.OwnerId
+        && TransitionAllowed(RentalTransition.Approve);
 
     public bool ShowBorrowerCancel =>
         Rental is not null
         && _authService.CurrentUser?.Id == Rental.BorrowerUserId
-        && IsPendingLike(Rental.Status);
+        && _workflowPolicy.BorrowerCanWithdrawPendingRequest
+        && TransitionAllowed(RentalTransition.Cancel);
+
+    /// <summary>
+    /// Shared API does not support borrower withdrawal; explains why cancel is unavailable.
+    /// </summary>
+    public bool ShowBorrowerWithdrawUnavailableHint =>
+        Rental is not null
+        && _workflowPolicy.IsRemoteApiMode
+        && _workflowPolicy.IsRequestedLike(Rental.Status)
+        && _authService.CurrentUser?.Id == Rental.BorrowerUserId;
 
     public bool ShowOwnerApprovedBeforeStart =>
         Rental is not null
         && _authService.CurrentUser?.Id == Rental.OwnerId
-        && IsApproved(Rental.Status)
+        && _workflowPolicy.IsApprovedLike(Rental.Status)
         && TodayUtc < Rental.StartDate;
 
     public bool ShowOwnerStartRental =>
         Rental is not null
         && _authService.CurrentUser?.Id == Rental.OwnerId
-        && IsApproved(Rental.Status)
-        && TodayUtc >= Rental.StartDate;
+        && TransitionAllowed(RentalTransition.StartRental);
 
-    public bool ShowOwnerReturn =>
+    public bool ShowBorrowerReturn =>
         Rental is not null
-        && _authService.CurrentUser?.Id == Rental.OwnerId
-        && IsOutForRent(Rental.Status);
+        && _authService.CurrentUser?.Id == Rental.BorrowerUserId
+        && TransitionAllowed(RentalTransition.Return);
 
     public bool ShowOwnerComplete =>
         Rental is not null
         && _authService.CurrentUser?.Id == Rental.OwnerId
-        && IsReturned(Rental.Status);
+        && TransitionAllowed(RentalTransition.Complete);
 
     private static DateOnly TodayUtc => DateOnly.FromDateTime(DateTime.UtcNow);
 
     public RentalDetailViewModel(
         IRentalRepository rentalRepository,
         IAuthenticationService authService,
-        INavigationService navigationService)
+        INavigationService navigationService,
+        IRentalWorkflowPolicy workflowPolicy)
     {
         _rentalRepository = rentalRepository;
         _authService = authService;
         _navigationService = navigationService;
+        _workflowPolicy = workflowPolicy;
         Title = "Rental details";
+    }
+
+    private bool TransitionAllowed(RentalTransition transition)
+    {
+        var userId = _authService.CurrentUser?.Id;
+        if (Rental is null || userId is null)
+            return false;
+
+        return _workflowPolicy.CanTransition(Rental, userId.Value, transition, TodayUtc).Allowed;
     }
 
     public Task ApplyQueryRentalIdAsync(string? rawId)
@@ -177,72 +199,55 @@ public partial class RentalDetailViewModel : BaseViewModel
     [RelayCommand]
     private async Task ApproveAsync()
     {
-        await TransitionIfAllowedAsync(
-            () => IsOwner() && IsPendingLike(Rental?.Status),
-            RentalTransition.Approve,
-            navigateBack: true);
+        await TransitionIfAllowedAsync(RentalTransition.Approve, navigateBack: true);
     }
 
     [RelayCommand]
     private async Task RejectAsync()
     {
-        await TransitionIfAllowedAsync(
-            () => IsOwner() && IsPendingLike(Rental?.Status),
-            RentalTransition.Reject,
-            navigateBack: true);
+        await TransitionIfAllowedAsync(RentalTransition.Reject, navigateBack: true);
     }
 
     [RelayCommand]
     private async Task CancelAsBorrowerAsync()
     {
-        await TransitionIfAllowedAsync(
-            () => IsBorrower() && IsPendingLike(Rental?.Status),
-            RentalTransition.Cancel,
-            navigateBack: true);
+        await TransitionIfAllowedAsync(RentalTransition.Cancel, navigateBack: true);
     }
 
     [RelayCommand]
     private async Task StartRentalAsync()
     {
-        await TransitionIfAllowedAsync(
-            () => IsOwner() && IsApproved(Rental?.Status) && TodayUtc >= (Rental?.StartDate ?? DateOnly.MaxValue),
-            RentalTransition.StartRental,
-            navigateBack: false);
+        await TransitionIfAllowedAsync(RentalTransition.StartRental, navigateBack: false);
     }
 
     [RelayCommand]
     private async Task ReturnAsync()
     {
-        await TransitionIfAllowedAsync(
-            () => IsOwner() && IsOutForRent(Rental?.Status),
-            RentalTransition.Return,
-            navigateBack: false);
+        await TransitionIfAllowedAsync(RentalTransition.Return, navigateBack: false);
     }
 
     [RelayCommand]
     private async Task CompleteAsync()
     {
-        await TransitionIfAllowedAsync(
-            () => IsOwner() && IsReturned(Rental?.Status),
-            RentalTransition.Complete,
-            navigateBack: false);
+        await TransitionIfAllowedAsync(RentalTransition.Complete, navigateBack: false);
     }
 
-    private bool IsOwner() =>
-        Rental is not null && _authService.CurrentUser?.Id == Rental.OwnerId;
-
-    private bool IsBorrower() =>
-        Rental is not null && _authService.CurrentUser?.Id == Rental.BorrowerUserId;
-
-    private async Task TransitionIfAllowedAsync(Func<bool> canAct, RentalTransition transition, bool navigateBack)
+    private async Task TransitionIfAllowedAsync(RentalTransition transition, bool navigateBack)
     {
-        if (Rental is null || !canAct())
+        if (Rental is null)
             return;
 
         var user = _authService.CurrentUser;
         if (user is null)
         {
             SetError("Sign in to update this rental.");
+            return;
+        }
+
+        var (allowed, reason) = _workflowPolicy.CanTransition(Rental, user.Id, transition, TodayUtc);
+        if (!allowed)
+        {
+            SetError(reason ?? "This action is not allowed.");
             return;
         }
 
@@ -284,37 +289,10 @@ public partial class RentalDetailViewModel : BaseViewModel
         OnPropertyChanged(nameof(RequestedAtDisplay));
         OnPropertyChanged(nameof(ShowOwnerActions));
         OnPropertyChanged(nameof(ShowBorrowerCancel));
+        OnPropertyChanged(nameof(ShowBorrowerWithdrawUnavailableHint));
         OnPropertyChanged(nameof(ShowOwnerApprovedBeforeStart));
         OnPropertyChanged(nameof(ShowOwnerStartRental));
-        OnPropertyChanged(nameof(ShowOwnerReturn));
+        OnPropertyChanged(nameof(ShowBorrowerReturn));
         OnPropertyChanged(nameof(ShowOwnerComplete));
-    }
-
-    private static bool IsPendingLike(string? status)
-    {
-        if (string.IsNullOrWhiteSpace(status))
-            return false;
-        return status.Trim().Equals(RentalStatuses.Pending, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool IsApproved(string? status)
-    {
-        if (string.IsNullOrWhiteSpace(status))
-            return false;
-        return status.Trim().Equals(RentalStatuses.Approved, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool IsOutForRent(string? status)
-    {
-        if (string.IsNullOrWhiteSpace(status))
-            return false;
-        return status.Trim().Equals(RentalStatuses.OutForRent, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool IsReturned(string? status)
-    {
-        if (string.IsNullOrWhiteSpace(status))
-            return false;
-        return status.Trim().Equals(RentalStatuses.Returned, StringComparison.OrdinalIgnoreCase);
     }
 }

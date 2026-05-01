@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Maui.ApplicationModel;
 using StarterApp.Database.Models;
 using StarterApp.Database.Repositories;
+using StarterApp.Database.Workflow;
 using StarterApp.Services;
 using StarterApp.Views;
 
@@ -11,6 +12,7 @@ namespace StarterApp.ViewModels;
 
 /// <summary>
 /// Lists rentals for the signed-in user: outgoing (as borrower) vs incoming (as owner), with navigation to detail.
+/// Outgoing excludes <see cref="RentalStatusValues.Returned"/>; incoming excludes <see cref="RentalStatusValues.Rejected"/>.
 /// </summary>
 public partial class RentalListsViewModel : BaseViewModel
 {
@@ -72,6 +74,13 @@ public partial class RentalListsViewModel : BaseViewModel
             IReadOnlyList<Rental> list = ScopeIndex == 0
                 ? await _rentalRepository.GetOutgoingAsync(user.Id)
                 : await _rentalRepository.GetIncomingAsync(user.Id);
+
+            // Filter out returned rentals for outgoing and rejected rentals for incoming.
+            list = ScopeIndex == 0
+                ? list.Where(r => RentalStatusNormalizer.Normalize(r.Status) != RentalStatusValues.Returned)
+                    .ToList()
+                : list.Where(r => RentalStatusNormalizer.Normalize(r.Status) != RentalStatusValues.Rejected)
+                    .ToList();
 
             await MainThreadInvokeAsync(() =>
             {

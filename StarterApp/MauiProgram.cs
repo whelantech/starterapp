@@ -7,6 +7,7 @@ using StarterApp.Database.Models;
 using StarterApp.Views;
 using StarterApp.Database.Api;
 using StarterApp.Database.Repositories;
+using StarterApp.Database.Workflow;
 using StarterApp.Services;
 
 namespace StarterApp;
@@ -28,6 +29,9 @@ public static class MauiProgram
         // false = local PostgreSQL (run migrations; emulator uses 10.0.2.2 in appsettings).
         var useSharedApi = true;
         const string ApiBaseUrl = "https://set09102-api.b-davison.workers.dev/";
+
+        // Shared workflow policy (API vs local toggled here once for the whole app).
+        builder.Services.AddSingleton<IRentalWorkflowPolicy>(_ => new RentalWorkflowPolicy(useSharedApi));
 
         if (useSharedApi)
         {
@@ -56,7 +60,10 @@ public static class MauiProgram
                 var ctx = sp.GetRequiredService<AppDbContext>();
                 return new ItemRepository(ctx, new EfRepository<Category, int>(ctx));
             });
-            builder.Services.AddTransient<IRentalRepository, RentalRepository>();
+            builder.Services.AddTransient<IRentalRepository>(sp =>
+                new RentalRepository(
+                    sp.GetRequiredService<AppDbContext>(),
+                    sp.GetRequiredService<IRentalWorkflowPolicy>()));
         }
 
         builder.Services.AddSingleton<IRentalService, RentalService>();
