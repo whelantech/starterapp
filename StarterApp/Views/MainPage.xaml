@@ -226,7 +226,7 @@
                         </Grid>
                     </Border>
 
-                    <!-- My rentals -->
+                    <!-- My Rental Requests -->
                     <Border
                         BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource Gray900}}"
                         Stroke="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray700}}"
@@ -245,7 +245,7 @@
                                    FontSize="24"
                                    VerticalOptions="Center" />
                             <StackLayout Grid.Column="1" Margin="15,0,0,0" VerticalOptions="Center">
-                                <Label Text="My rentals"
+                                <Label Text="My Rental Requests"
                                        FontSize="16"
                                        FontAttributes="Bold" />
                                 <Label Text="Incoming and outgoing rental requests"

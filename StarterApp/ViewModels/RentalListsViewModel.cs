@@ -31,7 +31,7 @@ public partial class RentalListsViewModel : BaseViewModel
         _rentalRepository = rentalRepository;
         _authService = authService;
         _navigationService = navigationService;
-        Title = "My rentals";
+        Title = "My Rental Requests";
     }
 
     /// <summary>Opens the read-only detail page for a rental (incoming or outgoing).</summary>
