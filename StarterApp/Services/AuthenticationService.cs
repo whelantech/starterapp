@@ -5,25 +5,34 @@ using BCrypt.Net;
 
 namespace StarterApp.Services;
 
+/// <summary>
+/// Local-database authentication: loads users from <see cref="AppDbContext"/>, verifies passwords with BCrypt, and keeps the current session in memory.
+/// </summary>
 public class AuthenticationService : IAuthenticationService
 {
     private readonly AppDbContext _context;
     private User? _currentUser;
     private List<string> _currentUserRoles = new();
 
+    /// <inheritdoc />
     public event EventHandler<bool>? AuthenticationStateChanged;
 
+    /// <summary>Creates the service using the provided EF Core context (typically scoped/transient per request or page).</summary>
     public AuthenticationService(AppDbContext context)
     {
         _context = context;
     }
 
+    /// <inheritdoc />
     public bool IsAuthenticated => _currentUser != null;
 
+    /// <inheritdoc />
     public User? CurrentUser => _currentUser;
 
+    /// <inheritdoc />
     public List<string> CurrentUserRoles => _currentUserRoles;
 
+    /// <inheritdoc />
     public async Task<AuthenticationResult> LoginAsync(string email, string password)
     {
         try
@@ -58,6 +67,7 @@ public class AuthenticationService : IAuthenticationService
         }
     }
 
+    /// <inheritdoc />
     public async Task<AuthenticationResult> RegisterAsync(string firstName, string lastName, string email, string password)
     {
         try
@@ -106,6 +116,7 @@ public class AuthenticationService : IAuthenticationService
         }
     }
 
+    /// <inheritdoc />
     public Task LogoutAsync()
     {
         _currentUser = null;
@@ -114,21 +125,25 @@ public class AuthenticationService : IAuthenticationService
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc />
     public bool HasRole(string roleName)
     {
         return _currentUserRoles.Contains(roleName, StringComparer.OrdinalIgnoreCase);
     }
 
+    /// <inheritdoc />
     public bool HasAnyRole(params string[] roleNames)
     {
         return roleNames.Any(role => HasRole(role));
     }
 
+    /// <inheritdoc />
     public bool HasAllRoles(params string[] roleNames)
     {
         return roleNames.All(role => HasRole(role));
     }
 
+    /// <inheritdoc />
     public async Task<bool> ChangePasswordAsync(string currentPassword, string newPassword)
     {
         if (_currentUser == null)
@@ -160,6 +175,7 @@ public class AuthenticationService : IAuthenticationService
     }
 }
 
+/// <summary>Outcome of a login or registration attempt (success flag and user-facing message).</summary>
 public class AuthenticationResult
 {
     public bool IsSuccess { get; }

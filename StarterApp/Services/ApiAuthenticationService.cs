@@ -4,6 +4,9 @@ using StarterApp.Database.Models;
 
 namespace StarterApp.Services;
 
+/// <summary>
+/// Authenticates against the shared REST API: obtains JWT via <c>auth/token</c>, stores it via <see cref="AuthTokenStoreService"/>, and loads profile from <c>users/me</c>.
+/// </summary>
 public class ApiAuthenticationService : IAuthenticationService
 {
     private readonly HttpClient _httpClient;
@@ -11,18 +14,28 @@ public class ApiAuthenticationService : IAuthenticationService
     private User? _currentUser;
     private readonly List<string> _currentUserRoles = new();
 
+    /// <inheritdoc />
     public event EventHandler<bool>? AuthenticationStateChanged;
 
+    /// <inheritdoc />
     public bool IsAuthenticated => _currentUser != null;
+
+    /// <inheritdoc />
     public User? CurrentUser => _currentUser;
+
+    /// <inheritdoc />
     public List<string> CurrentUserRoles => _currentUserRoles;
 
+    /// <summary>Uses one shared <see cref="HttpClient"/> (Bearer header set after login) and persistent token storage.</summary>
     public ApiAuthenticationService(HttpClient httpClient, AuthTokenStoreService tokenStore)
     {
         _httpClient = httpClient;
         _tokenStore = tokenStore;
     }
 
+    /// <summary>
+    /// Restores session from stored token if still valid: sets Authorization header and loads current user from the API.
+    /// </summary>
     public async Task InitializeAsync()
     {
         var token = await _tokenStore.GetTokenAsync();
@@ -57,6 +70,7 @@ public class ApiAuthenticationService : IAuthenticationService
         AuthenticationStateChanged?.Invoke(this, true);
     }
 
+    /// <inheritdoc />
     public async Task<AuthenticationResult> LoginAsync(string email, string password)
     {
         try
@@ -98,6 +112,7 @@ public class ApiAuthenticationService : IAuthenticationService
         }
     }
 
+    /// <inheritdoc />
     public async Task<AuthenticationResult> RegisterAsync(string firstName, string lastName, string email, string password)
     {
         try
@@ -124,6 +139,7 @@ public class ApiAuthenticationService : IAuthenticationService
         }
     }
 
+    /// <inheritdoc />
     public Task LogoutAsync()
     {
         _currentUser = null;
@@ -134,15 +150,20 @@ public class ApiAuthenticationService : IAuthenticationService
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc />
     public bool HasRole(string roleName) =>
         _currentUserRoles.Contains(roleName, StringComparer.OrdinalIgnoreCase);
 
+    /// <inheritdoc />
     public bool HasAnyRole(params string[] roleNames) =>
         roleNames.Any(HasRole);
 
+    /// <inheritdoc />
     public bool HasAllRoles(params string[] roleNames) =>
         roleNames.All(HasRole);
 
+    /// <inheritdoc />
+    /// <remarks>The hosted API does not expose password change; always returns <c>false</c>.</remarks>
     public Task<bool> ChangePasswordAsync(string currentPassword, string newPassword)
     {
         // Not supported by the shared API

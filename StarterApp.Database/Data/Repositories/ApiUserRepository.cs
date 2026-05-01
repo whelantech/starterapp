@@ -22,6 +22,8 @@ public class ApiUserRepository
         _httpClient = httpClient;
     }
 
+    /// <summary>Fetches the authenticated user from <c>GET users/me</c> using the client’s Bearer token.</summary>
+    /// <remarks>Throws <see cref="UnauthorizedAccessException"/> or <see cref="InvalidOperationException"/> on failure; does not return null on error.</remarks>
     public async Task<User?> GetCurrentUserAsync()
     {
         using var response = await _httpClient.GetAsync("users/me");

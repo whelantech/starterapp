@@ -8,6 +8,9 @@ using StarterApp.Services;
 
 namespace StarterApp.ViewModels;
 
+/// <summary>
+/// Detail screen for one rental: load/refresh, derived display properties, and status transitions allowed for owner or borrower.
+/// </summary>
 public partial class RentalDetailViewModel : BaseViewModel
 {
     private readonly IRentalRepository _rentalRepository;
@@ -71,6 +74,7 @@ public partial class RentalDetailViewModel : BaseViewModel
         Title = "Rental details";
     }
 
+    /// <summary>Parses <c>rentalId</c> from the route and triggers a load when valid.</summary>
     public Task ApplyQueryRentalIdAsync(string? rawId)
     {
         if (string.IsNullOrWhiteSpace(rawId) || !int.TryParse(rawId.Trim(), out var id) || id <= 0)
@@ -85,6 +89,7 @@ public partial class RentalDetailViewModel : BaseViewModel
         return LoadAsync(id);
     }
 
+    /// <summary>Loads the rental if the current user is owner or borrower. When <paramref name="isRefresh"/> is true, avoids toggling the full-page busy overlay.</summary>
     public async Task LoadAsync(int rentalId, bool isRefresh = false)
     {
         _currentRentalId = rentalId;
@@ -180,6 +185,7 @@ public partial class RentalDetailViewModel : BaseViewModel
     private bool IsBorrower() =>
         Rental is not null && _authService.CurrentUser?.Id == Rental.BorrowerUserId;
 
+    /// <summary>Calls the repository to change status only when <paramref name="canAct"/> passes (VM-side role and state guards).</summary>
     private async Task UpdateStatusIfAllowedAsync(Func<bool> canAct, string newStatus)
     {
         if (Rental is null || !canAct())
@@ -228,6 +234,7 @@ public partial class RentalDetailViewModel : BaseViewModel
         OnPropertyChanged(nameof(ShowBorrowerCancel));
     }
 
+    /// <summary>Maps API/local status strings to “pending-like” UI (approve/reject/cancel visibility).</summary>
     private static bool IsPendingLike(string? status)
     {
         if (string.IsNullOrWhiteSpace(status))
