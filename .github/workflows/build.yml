@@ -88,7 +88,8 @@ jobs:
             /d:sonar.token="${{ secrets.SONAR_TOKEN }}" \
             /d:sonar.host.url="https://sonarcloud.io" \
             /d:sonar.scanner.scanAll=false \
-            /d:sonar.cs.vscoveragexml.reportsPaths=coverage.xml
+            /d:sonar.cs.vscoveragexml.reportsPaths=coverage.xml \
+            /d:sonar.exclusions=**/Platforms/**,**/Resources/**,**/StarterApp.Migrations/**
 
       - name: Build solution (app, DB, migrations, test projects)
         env:

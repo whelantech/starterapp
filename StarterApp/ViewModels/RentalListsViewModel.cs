@@ -102,13 +102,22 @@ public partial class RentalListsViewModel : BaseViewModel
     /// <summary>Runs UI-bound collection updates on the MAUI main thread to avoid cross-thread ObservableCollection errors.</summary>
     private static Task MainThreadInvokeAsync(Action action)
     {
-        if (MainThread.IsMainThread)
+        try
         {
+            if (MainThread.IsMainThread)
+            {
+                action();
+                return Task.CompletedTask;
+            }
+
+            return MainThread.InvokeOnMainThreadAsync(action);
+        }
+        catch (Exception ex) when (ex.GetType().Name == "NotImplementedInReferenceAssemblyException")
+        {
+            // net10.0 library / xUnit host has no MAUI main-thread dispatcher — run inline for tests.
             action();
             return Task.CompletedTask;
         }
-
-        return MainThread.InvokeOnMainThreadAsync(action);
     }
 
 }

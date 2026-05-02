@@ -1,8 +1,7 @@
 using StarterApp.Database.Models;
-using StarterApp.Database.Repositories;
 using StarterApp.Database.Workflow;
 
-namespace StarterApp.Test;
+namespace StarterApp.Test.Unit.Workflow;
 
 public sealed class RentalWorkflowPolicyTests
 {

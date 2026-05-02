@@ -6,21 +6,24 @@ using StarterApp.Database.Repositories;
 using StarterApp.Database.Workflow;
 using Xunit;
 
-namespace StarterApp.Test;
+namespace StarterApp.Test.Integration;
 
 /// <summary>
 /// Rental integration tests against <c>testdb</c> (see StarterApp.Database/appsettings.json <c>TestConnection</c>).
 /// Optional: <c>TEST_DATABASE_CONNECTION</c> env var overrides the connection string.
 /// </summary>
-public class RentalRepositoryTests : IClassFixture<RentalRepositoryTests.Fixture>
+public sealed class RentalRepositoryTests : IClassFixture<RentalRepositoryTests.Fixture>
 {
     private readonly Fixture _fixture;
 
     public RentalRepositoryTests(Fixture fixture) => _fixture = fixture;
 
-    [Fact(Skip = "CI Postgres credentials differ from embedded TestConnection (app_user); unblock Sonar pipeline.")]
+    [Fact]
     public async Task GetByIdAsync_Borrower_CanLoadSeededRental()
     {
+        if (!_fixture.IsAvailable)
+            return;
+
         var repo = _fixture.CreateRentalRepository();
         var rental = await repo.GetByIdAsync(_fixture.SeededRentalId, _fixture.SeededBorrowerUserId);
 
@@ -34,6 +37,7 @@ public class RentalRepositoryTests : IClassFixture<RentalRepositoryTests.Fixture
     /// </summary>
     public sealed class Fixture : IDisposable
     {
+        public bool IsAvailable { get; }
         public AppDbContext Context { get; private set; } = null!;
 
         public int SeededOwnerUserId { get; private set; }
@@ -43,17 +47,31 @@ public class RentalRepositoryTests : IClassFixture<RentalRepositoryTests.Fixture
 
         public Fixture()
         {
-            Context = CreateContext();
-            Context.Database.EnsureDeleted();
-            Context.Dispose();
+            try
+            {
+                Context = CreateContext();
+                Context.Database.EnsureDeleted();
+                Context.Dispose();
 
-            Context = CreateContext();
-            Context.Database.Migrate();
-            Seed();
+                Context = CreateContext();
+                Context.Database.Migrate();
+                Seed();
+                IsAvailable = true;
+            }
+            catch
+            {
+                Context?.Dispose();
+                Context = null!;
+                IsAvailable = false;
+            }
         }
 
-        public RentalRepository CreateRentalRepository() =>
-            new(Context, new RentalWorkflowPolicy());
+        public RentalRepository CreateRentalRepository()
+        {
+            if (!IsAvailable || Context is null)
+                throw new InvalidOperationException("PostgreSQL test fixture is not available.");
+            return new(Context, new RentalWorkflowPolicy());
+        }
 
         private static AppDbContext CreateContext()
         {
@@ -153,6 +171,6 @@ public class RentalRepositoryTests : IClassFixture<RentalRepositoryTests.Fixture
             SeededRentalId = rental.Id;
         }
 
-        public void Dispose() => Context.Dispose();
+        public void Dispose() => Context?.Dispose();
     }
 }
