@@ -24,7 +24,4 @@ public sealed class OutForRentState : IRentalState
 
     public Task<IRentalState> Complete(Rental rental) =>
         Task.FromException<IRentalState>(new InvalidOperationException("Mark returned before completing."));
-
-    public Task<IRentalState> Cancel(Rental rental) =>
-        Task.FromException<IRentalState>(new InvalidOperationException("Cannot cancel an active rental."));
 }

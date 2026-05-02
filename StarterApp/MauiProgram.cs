@@ -31,7 +31,7 @@ public static class MauiProgram
         const string ApiBaseUrl = "https://set09102-api.b-davison.workers.dev/";
 
         // Shared workflow policy (API vs local toggled here once for the whole app).
-        builder.Services.AddSingleton<IRentalWorkflowPolicy>(_ => new RentalWorkflowPolicy(useSharedApi));
+        builder.Services.AddSingleton<IRentalWorkflowPolicy, RentalWorkflowPolicy>();
 
         if (useSharedApi)
         {

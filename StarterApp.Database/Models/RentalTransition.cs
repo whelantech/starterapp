@@ -9,6 +9,5 @@ public enum RentalTransition
     Reject,
     StartRental,
     Return,
-    Complete,
-    Cancel
+    Complete
 }

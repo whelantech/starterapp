@@ -4,12 +4,6 @@ namespace StarterApp.Database.Workflow;
 
 public sealed class RentalWorkflowPolicy : IRentalWorkflowPolicy
 {
-    public RentalWorkflowPolicy(bool remoteApiMode) => IsRemoteApiMode = remoteApiMode;
-
-    public bool IsRemoteApiMode { get; }
-
-    public bool BorrowerCanWithdrawPendingRequest => !IsRemoteApiMode;
-
     public string NormalizeStatus(string? status) => RentalStatusNormalizer.Normalize(status);
 
     public bool IsRequestedLike(string? status) =>
@@ -55,18 +49,6 @@ public sealed class RentalWorkflowPolicy : IRentalWorkflowPolicy
                     return (false, "Only the owner can reject rental requests.");
                 return (true, null);
 
-            case RentalTransition.Cancel:
-                if (!IsRequestedLike(norm))
-                    return (false, "Only pending requests can be withdrawn.");
-                if (actingUserId != borrowerId)
-                    return (false, "Only the borrower can withdraw this request.");
-                if (IsRemoteApiMode)
-                {
-                    return (false,
-                        "Withdrawing a rental is not supported on the shared API. Ask the owner to reject the request, or wait for a response.");
-                }
-                return (true, null);
-
             case RentalTransition.StartRental:
                 if (!IsApprovedLike(norm))
                     return (false, "The rental must be approved before it can go out.");
@@ -94,11 +76,11 @@ public sealed class RentalWorkflowPolicy : IRentalWorkflowPolicy
                 return (true, null);
 
             default:
-                return (false, "Unsupported action.");
+                throw new ArgumentOutOfRangeException(nameof(transition), transition, null);
         }
     }
 
-    public string? GetApiPatchStatus(RentalTransition transition) =>
+    public string GetApiPatchStatus(RentalTransition transition) =>
         transition switch
         {
             RentalTransition.Approve => RentalStatusValues.Approved,
@@ -106,7 +88,6 @@ public sealed class RentalWorkflowPolicy : IRentalWorkflowPolicy
             RentalTransition.StartRental => RentalStatusValues.OutForRent,
             RentalTransition.Return => RentalStatusValues.Returned,
             RentalTransition.Complete => RentalStatusValues.Completed,
-            RentalTransition.Cancel => null,
-            _ => null
+            _ => throw new ArgumentOutOfRangeException(nameof(transition), transition, null)
         };
 }

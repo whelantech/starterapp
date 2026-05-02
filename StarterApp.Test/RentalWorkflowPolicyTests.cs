@@ -28,28 +28,9 @@ public sealed class RentalWorkflowPolicyTests
     }
 
     [Fact]
-    public void RemoteApiMode_BorrowerCancel_IsBlocked()
-    {
-        var policy = new RentalWorkflowPolicy(remoteApiMode: true);
-        var rental = BuildRental(RentalStatusValues.Requested);
-        var r = policy.CanTransition(rental, actingUserId: 1, RentalTransition.Cancel, new DateOnly(2026, 5, 1));
-        Assert.False(r.Allowed);
-        Assert.NotNull(r.Reason);
-    }
-
-    [Fact]
-    public void LocalMode_BorrowerCancel_IsAllowed_WhenRequested()
-    {
-        var policy = new RentalWorkflowPolicy(remoteApiMode: false);
-        var rental = BuildRental(RentalStatusValues.Requested);
-        var r = policy.CanTransition(rental, actingUserId: 1, RentalTransition.Cancel, new DateOnly(2026, 5, 1));
-        Assert.True(r.Allowed);
-    }
-
-    [Fact]
     public void LegacyPending_Normalizes_ToRequested_ForApproval()
     {
-        var policy = new RentalWorkflowPolicy(remoteApiMode: true);
+        var policy = new RentalWorkflowPolicy();
         var rental = BuildRental(RentalStatuses.Pending);
         Assert.True(policy.CanTransition(rental, actingUserId: 2, RentalTransition.Approve, new DateOnly(2026, 5, 1))
             .Allowed);
@@ -58,7 +39,7 @@ public sealed class RentalWorkflowPolicyTests
     [Fact]
     public void Owner_ApproveReject_OnlyWhenRequested()
     {
-        var policy = new RentalWorkflowPolicy(remoteApiMode: true);
+        var policy = new RentalWorkflowPolicy();
         var requested = BuildRental(RentalStatusValues.Requested);
         Assert.True(policy.CanTransition(requested, 2, RentalTransition.Approve, new DateOnly(2026, 5, 1)).Allowed);
         Assert.True(policy.CanTransition(requested, 2, RentalTransition.Reject, new DateOnly(2026, 5, 1)).Allowed);
@@ -70,7 +51,7 @@ public sealed class RentalWorkflowPolicyTests
     [Fact]
     public void Borrower_Return_OnlyWhenOutOrOverdue()
     {
-        var policy = new RentalWorkflowPolicy(remoteApiMode: true);
+        var policy = new RentalWorkflowPolicy();
         var outRent = BuildRental(RentalStatusValues.OutForRent);
         Assert.True(policy.CanTransition(outRent, 1, RentalTransition.Return, new DateOnly(2026, 6, 2)).Allowed);
 
@@ -84,7 +65,7 @@ public sealed class RentalWorkflowPolicyTests
     [Fact]
     public void Owner_NotAllowed_ToReturn()
     {
-        var policy = new RentalWorkflowPolicy(remoteApiMode: true);
+        var policy = new RentalWorkflowPolicy();
         var outRent = BuildRental(RentalStatusValues.OutForRent);
         var r = policy.CanTransition(outRent, actingUserId: 2, RentalTransition.Return, new DateOnly(2026, 6, 2));
         Assert.False(r.Allowed);
@@ -93,7 +74,7 @@ public sealed class RentalWorkflowPolicyTests
     [Fact]
     public void StartRental_RequiresApproved_AndOnOrAfterStartDate()
     {
-        var policy = new RentalWorkflowPolicy(remoteApiMode: true);
+        var policy = new RentalWorkflowPolicy();
         var approved = BuildRental(RentalStatusValues.Approved, start: new DateOnly(2026, 6, 10));
         Assert.False(policy.CanTransition(approved, 2, RentalTransition.StartRental, new DateOnly(2026, 6, 9)).Allowed);
         Assert.True(policy.CanTransition(approved, 2, RentalTransition.StartRental, new DateOnly(2026, 6, 10)).Allowed);
@@ -102,17 +83,9 @@ public sealed class RentalWorkflowPolicyTests
     [Fact]
     public void GetApiPatchStatus_UsesSpacedOutForRent()
     {
-        var policy = new RentalWorkflowPolicy(remoteApiMode: true);
+        var policy = new RentalWorkflowPolicy();
         Assert.Equal(RentalStatusValues.OutForRent, policy.GetApiPatchStatus(RentalTransition.StartRental));
         Assert.Equal(RentalStatusValues.Returned, policy.GetApiPatchStatus(RentalTransition.Return));
-        Assert.Null(policy.GetApiPatchStatus(RentalTransition.Cancel));
-    }
-
-    [Fact]
-    public void RentalTransitionApiMapper_Throws_OnCancel()
-    {
-        var policy = new RentalWorkflowPolicy(remoteApiMode: true);
-        Assert.Throws<InvalidOperationException>(() =>
-            RentalTransitionApiMapper.ToApiStatus(policy, RentalTransition.Cancel));
+        Assert.Equal(RentalStatusValues.Completed, policy.GetApiPatchStatus(RentalTransition.Complete));
     }
 }

@@ -11,6 +11,6 @@ public static class RentalStatusValues
     public const string Returned = "Returned";
     public const string Completed = "Completed";
 
-    /// <summary>Local-only terminal state when the borrower withdraws a pending request (not used on the shared API).</summary>
+    /// <summary>Legacy local-only status for rows withdrawn before this workflow dropped borrower cancel.</summary>
     public const string Cancelled = "Cancelled";
 }

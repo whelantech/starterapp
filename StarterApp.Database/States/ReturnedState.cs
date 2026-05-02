@@ -24,7 +24,4 @@ public sealed class ReturnedState : IRentalState
         rental.Status = RentalStatusValues.Completed;
         return Task.FromResult<IRentalState>(new CompletedState());
     }
-
-    public Task<IRentalState> Cancel(Rental rental) =>
-        Task.FromException<IRentalState>(new InvalidOperationException("Cannot cancel after return."));
 }

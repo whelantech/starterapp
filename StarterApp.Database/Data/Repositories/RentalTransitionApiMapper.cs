@@ -7,15 +7,6 @@ namespace StarterApp.Database.Repositories;
 public static class RentalTransitionApiMapper
 {
     /// <inheritdoc cref="IRentalWorkflowPolicy.GetApiPatchStatus"/>
-    public static string ToApiStatus(IRentalWorkflowPolicy policy, RentalTransition transition)
-    {
-        var s = policy.GetApiPatchStatus(transition);
-        if (s is null)
-        {
-            throw new InvalidOperationException(
-                $"Transition {transition} cannot be expressed as an API status update.");
-        }
-
-        return s;
-    }
+    public static string ToApiStatus(IRentalWorkflowPolicy policy, RentalTransition transition) =>
+        policy.GetApiPatchStatus(transition);
 }

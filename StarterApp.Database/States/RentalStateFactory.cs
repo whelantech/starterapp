@@ -15,7 +15,7 @@ public static class RentalStateFactory
             RentalStatusValues.Overdue => new OverdueState(),
             RentalStatusValues.Returned => new ReturnedState(),
             RentalStatusValues.Completed => new CompletedState(),
-            RentalStatusValues.Cancelled => new CancelledState(),
+            RentalStatusValues.Cancelled => new ClosedRentalState(),
             var unknown => throw new InvalidOperationException($"Unknown rental status: {unknown}")
         };
     }

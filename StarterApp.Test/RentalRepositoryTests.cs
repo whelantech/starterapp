@@ -53,7 +53,7 @@ public class RentalRepositoryTests : IClassFixture<RentalRepositoryTests.Fixture
         }
 
         public RentalRepository CreateRentalRepository() =>
-            new(Context, new RentalWorkflowPolicy(remoteApiMode: false));
+            new(Context, new RentalWorkflowPolicy());
 
         private static AppDbContext CreateContext()
         {

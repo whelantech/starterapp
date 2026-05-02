@@ -222,10 +222,6 @@ public class RentalRepository : IRentalRepository
                 await InvokeStateAsync(state, s => s.Reject(rental)).ConfigureAwait(false);
                 break;
 
-            case RentalTransition.Cancel:
-                await InvokeStateAsync(state, s => s.Cancel(rental)).ConfigureAwait(false);
-                break;
-
             case RentalTransition.StartRental:
                 await InvokeStateAsync(state, s => s.StartRental(rental)).ConfigureAwait(false);
                 break;

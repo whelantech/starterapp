@@ -21,7 +21,4 @@ public sealed class CompletedState : IRentalState
 
     public Task<IRentalState> Complete(Rental rental) =>
         Task.FromException<IRentalState>(new InvalidOperationException("Rental is already completed."));
-
-    public Task<IRentalState> Cancel(Rental rental) =>
-        Task.FromException<IRentalState>(new InvalidOperationException("Rental is already completed."));
 }

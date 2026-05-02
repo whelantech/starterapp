@@ -29,7 +29,4 @@ public sealed class ApprovedState : IRentalState
 
     public Task<IRentalState> Complete(Rental rental) =>
         Task.FromException<IRentalState>(new InvalidOperationException("Complete is only allowed after the item is returned."));
-
-    public Task<IRentalState> Cancel(Rental rental) =>
-        Task.FromException<IRentalState>(new InvalidOperationException("Borrower can only cancel while the request is pending."));
 }

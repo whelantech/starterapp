@@ -27,10 +27,4 @@ public sealed class RequestedState : IRentalState
 
     public Task<IRentalState> Complete(Rental rental) =>
         Task.FromException<IRentalState>(new InvalidOperationException("Cannot complete a rental that is still requested."));
-
-    public Task<IRentalState> Cancel(Rental rental)
-    {
-        rental.Status = RentalStatusValues.Cancelled;
-        return Task.FromResult<IRentalState>(new CancelledState());
-    }
 }

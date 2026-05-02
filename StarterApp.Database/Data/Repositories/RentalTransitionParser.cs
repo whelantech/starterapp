@@ -15,9 +15,6 @@ internal static class RentalTransitionParser
         if (n == RentalStatusValues.Rejected)
             return RentalTransition.Reject;
 
-        if (n == RentalStatusValues.Cancelled)
-            return RentalTransition.Cancel;
-
         if (n == RentalStatusValues.Completed)
             return RentalTransition.Complete;
 

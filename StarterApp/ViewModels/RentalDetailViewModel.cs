@@ -57,21 +57,6 @@ public partial class RentalDetailViewModel : BaseViewModel
         && _authService.CurrentUser?.Id == Rental.OwnerId
         && TransitionAllowed(RentalTransition.Approve);
 
-    public bool ShowBorrowerCancel =>
-        Rental is not null
-        && _authService.CurrentUser?.Id == Rental.BorrowerUserId
-        && _workflowPolicy.BorrowerCanWithdrawPendingRequest
-        && TransitionAllowed(RentalTransition.Cancel);
-
-    /// <summary>
-    /// Shared API does not support borrower withdrawal; explains why cancel is unavailable.
-    /// </summary>
-    public bool ShowBorrowerWithdrawUnavailableHint =>
-        Rental is not null
-        && _workflowPolicy.IsRemoteApiMode
-        && _workflowPolicy.IsRequestedLike(Rental.Status)
-        && _authService.CurrentUser?.Id == Rental.BorrowerUserId;
-
     public bool ShowOwnerApprovedBeforeStart =>
         Rental is not null
         && _authService.CurrentUser?.Id == Rental.OwnerId
@@ -209,12 +194,6 @@ public partial class RentalDetailViewModel : BaseViewModel
     }
 
     [RelayCommand]
-    private async Task CancelAsBorrowerAsync()
-    {
-        await TransitionIfAllowedAsync(RentalTransition.Cancel, navigateBack: true);
-    }
-
-    [RelayCommand]
     private async Task StartRentalAsync()
     {
         await TransitionIfAllowedAsync(RentalTransition.StartRental, navigateBack: false);
@@ -288,8 +267,6 @@ public partial class RentalDetailViewModel : BaseViewModel
         OnPropertyChanged(nameof(StatusDisplayText));
         OnPropertyChanged(nameof(RequestedAtDisplay));
         OnPropertyChanged(nameof(ShowOwnerActions));
-        OnPropertyChanged(nameof(ShowBorrowerCancel));
-        OnPropertyChanged(nameof(ShowBorrowerWithdrawUnavailableHint));
         OnPropertyChanged(nameof(ShowOwnerApprovedBeforeStart));
         OnPropertyChanged(nameof(ShowOwnerStartRental));
         OnPropertyChanged(nameof(ShowBorrowerReturn));

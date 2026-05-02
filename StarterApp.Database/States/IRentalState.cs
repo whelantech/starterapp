@@ -18,6 +18,4 @@ public interface IRentalState
     Task<IRentalState> Return(Rental rental);
 
     Task<IRentalState> Complete(Rental rental);
-
-    Task<IRentalState> Cancel(Rental rental);
 }
