@@ -73,8 +73,7 @@ jobs:
           mkdir -p "${{ runner.temp }}/scanner"
           dotnet tool update dotnet-sonarscanner --tool-path "${{ runner.temp }}/scanner"
 
-      # Token: repository secret SONAR_TOKEN only (SonarQube Cloud → My Account → Security).
-      # Project/org keys match SonarCloud onboarding for this repo.
+      # SonarScanner for .NET does not support sonar-project.properties in the repo — pass settings via `begin` only.
       - name: Start Sonar Analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -84,7 +83,12 @@ jobs:
             /o:"whelantech" \
             /d:sonar.token="${{ secrets.SONAR_TOKEN }}" \
             /d:sonar.host.url="https://sonarcloud.io" \
-            /d:sonar.scanner.scanAll=false
+            /d:sonar.projectBaseDir="${{ github.workspace }}" \
+            /d:sonar.scanner.scanAll=false \
+            /d:sonar.sourceEncoding=UTF-8 \
+            /d:sonar.cs.opencover.reportsPaths=**/coverage.opencover.xml \
+            /d:sonar.exclusions=**/Platforms/**,**/Resources/**,**/StarterApp.Migrations/** \
+            /d:sonar.coverage.exclusions=**/StarterApp.Test/**,**/*Tests.cs
 
       - name: Build solution (app, DB, migrations, test projects)
         env:

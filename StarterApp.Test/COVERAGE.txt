@@ -1,6 +1,7 @@
 SonarCloud coverage (OpenCover, reliable with Sonar C# analyzer)
 
+- **SonarScanner for .NET** ignores `sonar-project.properties` in the repo (post-process fails if that file exists). OpenCover path and Sonar settings are set in `.github/workflows/build.yml` on `dotnet-sonarscanner begin` (`sonar.cs.opencover.reportsPaths`, exclusions, etc.).
 - CI generates OpenCover via Coverlet: test step uses `coverlet.runsettings` + `--collect:"XPlat Code Coverage"`.
-- Report path: `**/coverage.opencover.xml` (under `StarterApp.Test/TestResults/.../`) — see `sonar-project.properties` → `sonar.cs.opencover.reportsPaths`.
-- Local: `dotnet test StarterApp.sln -f net10.0 --settings coverlet.runsettings --collect:"XPlat Code Coverage"` then open the Attachment path printed at the end of the test run.
-- Scanner reads `sonar-project.properties` at repo root; `sonar.sources` / `sonar.tests` use `StarterApp` names (not `RentalApp`).
+- Report files live under `StarterApp.Test/TestResults/.../coverage.opencover.xml`; the workflow tells Sonar to use the glob `**/coverage.opencover.xml`.
+- Local: `dotnet test StarterApp.sln -f net10.0 --settings coverlet.runsettings --collect:"XPlat Code Coverage"` and use the Attachment path from the test output.
+- Test vs production scope: the scanner discovers projects from the solution; `sonar.coverage.exclusions` trims test code from coverage metrics.
