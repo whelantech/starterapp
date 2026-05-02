@@ -106,4 +106,56 @@ public sealed class RentalDetailViewModelTests
         Assert.False(vm.HasError);
         Assert.Equal(1, nav.NavigateBackCount);
     }
+
+    [Fact]
+    public async Task ApplyQueryRentalIdAsync_invalid_sets_error()
+    {
+        var vm = new RentalDetailViewModel(new FakeRentalRepository(), new FakeAuthenticationService(),
+            new FakeNavigationService(), new RentalWorkflowPolicy());
+
+        await vm.ApplyQueryRentalIdAsync("no");
+
+        Assert.True(vm.HasError);
+        Assert.Null(vm.Rental);
+    }
+
+    [Fact]
+    public async Task RefreshAsync_without_loaded_id_completes_quietly()
+    {
+        var vm = new RentalDetailViewModel(new FakeRentalRepository(), new FakeAuthenticationService(),
+            new FakeNavigationService(), new RentalWorkflowPolicy());
+
+        await vm.RefreshCommand.ExecuteAsync(null);
+
+        Assert.False(vm.IsRefreshing);
+    }
+
+    [Fact]
+    public async Task ApproveAsync_when_actor_is_not_owner_sets_policy_error()
+    {
+        var auth = new FakeAuthenticationService
+        {
+            CurrentUser = new User { Id = 3, Email = "b@test.com", FirstName = "B", LastName = "R" }
+        };
+        var rentals = new FakeRentalRepository();
+        rentals.Rentals.Add(new Rental
+        {
+            Id = 5,
+            ItemId = 1,
+            BorrowerUserId = 3,
+            OwnerId = 8,
+            StartDate = DateOnly.Parse("2026-01-01"),
+            EndDate = DateOnly.Parse("2026-01-02"),
+            Status = RentalStatusValues.Requested,
+            TotalPrice = 5,
+            CreatedAt = DateTime.UtcNow
+        });
+
+        var vm = new RentalDetailViewModel(rentals, auth, new FakeNavigationService(), new RentalWorkflowPolicy());
+        await vm.LoadAsync(5);
+
+        await vm.ApproveCommand.ExecuteAsync(null);
+
+        Assert.True(vm.HasError);
+    }
 }

@@ -21,13 +21,16 @@ public sealed class RegisterViewModelTests
     [Fact]
     public async Task RegisterAsync_success_shows_dialog_and_navigates_back()
     {
+        // Arrange
         var auth = new FakeAuthenticationService { NextRegister = new AuthenticationResult(true, "ok") };
         var nav = new FakeNavigationService();
         var ui = new RecordingUiDialogs();
         var vm = CreateValidVm(auth, nav, ui);
 
+        // Act
         await vm.RegisterCommand.ExecuteAsync(null);
 
+        // Assert
         Assert.False(vm.HasError);
         Assert.Single(ui.Infos);
         Assert.Equal(1, nav.NavigateBackCount);
@@ -36,11 +39,14 @@ public sealed class RegisterViewModelTests
     [Fact]
     public async Task RegisterAsync_failure_sets_error()
     {
+        // Arrange
         var auth = new FakeAuthenticationService { NextRegister = new AuthenticationResult(false, "Email taken") };
         var vm = CreateValidVm(auth, new FakeNavigationService(), new RecordingUiDialogs());
 
+        // Act
         await vm.RegisterCommand.ExecuteAsync(null);
 
+        // Assert
         Assert.True(vm.HasError);
         Assert.Equal("Email taken", vm.ErrorMessage);
     }
@@ -48,6 +54,7 @@ public sealed class RegisterViewModelTests
     [Theory]
     [InlineData("", "Bee", "a@b.com", "pw123", "pw123", true, "First name")]
     [InlineData("A", "", "a@b.com", "pw123", "pw123", true, "Last name")]
+    [InlineData("A", "B", "", "pw123", "pw123", true, "Email is required")]
     [InlineData("A", "B", "not-email", "pw123", "pw123", true, "valid email")]
     [InlineData("A", "B", "a@b.com", "pw", "pw", true, "at least 6")]
     [InlineData("A", "B", "a@b.com", "pw1234", "other", true, "do not match")]
@@ -55,6 +62,7 @@ public sealed class RegisterViewModelTests
     public async Task RegisterAsync_validation_sets_error(string first, string last, string email, string pw,
         string confirm, bool terms, string expectedFragment)
     {
+        // Arrange
         var vm = new RegisterViewModel(new FakeAuthenticationService(), new FakeNavigationService(),
             new RecordingUiDialogs())
         {
@@ -66,20 +74,56 @@ public sealed class RegisterViewModelTests
             AcceptTerms = terms
         };
 
+        // Act
         await vm.RegisterCommand.ExecuteAsync(null);
 
+        // Assert
         Assert.True(vm.HasError);
         Assert.Contains(expectedFragment, vm.ErrorMessage, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
+    public async Task RegisterAsync_when_exception_sets_error_prefix()
+    {
+        // Arrange
+        var auth = new FakeAuthenticationService { RegisterAsyncFault = new InvalidOperationException("offline") };
+        var vm = CreateValidVm(auth, new FakeNavigationService(), new RecordingUiDialogs());
+
+        // Act
+        await vm.RegisterCommand.ExecuteAsync(null);
+
+        // Assert
+        Assert.True(vm.HasError);
+        Assert.StartsWith("Registration failed:", vm.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task NavigateBackToLoginAsync_calls_navigation_back()
     {
+        // Arrange
         var nav = new FakeNavigationService();
         var vm = CreateValidVm(new FakeAuthenticationService(), nav, new RecordingUiDialogs());
 
+        // Act
         await vm.NavigateBackToLoginCommand.ExecuteAsync(null);
 
+        // Assert
         Assert.Equal(1, nav.NavigateBackCount);
+    }
+
+    [Fact]
+    public async Task RegisterAsync_when_IsBusy_returns_immediately()
+    {
+        // Arrange
+        var auth = new FakeAuthenticationService { NextRegister = new AuthenticationResult(true, "ok") };
+        var vm = CreateValidVm(auth, new FakeNavigationService(), new RecordingUiDialogs());
+
+        vm.IsBusy = true;
+
+        // Act
+        await vm.RegisterCommand.ExecuteAsync(null);
+
+        // Assert
+        Assert.True(vm.IsBusy);
     }
 }

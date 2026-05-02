@@ -10,9 +10,24 @@ public sealed class FakeItemRepository : IItemRepository
     public List<Category> Categories { get; } = new();
     public bool DeleteThrowsNotImplemented { get; set; }
 
+    /// <summary>Thrown from <see cref="CreateItemAsync"/> when non-null.</summary>
+    public Exception? CreateItemFault { get; set; }
+
+    /// <summary>Thrown from <see cref="UpdateItemAsync"/> when non-null.</summary>
+    public Exception? UpdateItemFault { get; set; }
+
+    /// <summary>When set, <see cref="GetAllCategoriesAsync"/> throws instead of returning categories.</summary>
+    public Exception? GetCategoriesException { get; set; }
+
+    /// <summary>Thrown from <see cref="GetAllItemsAsync"/> when non-null.</summary>
+    public Exception? GetAllItemsFault { get; set; }
+
     public Task<ItemQueryResult> GetAllItemsAsync(int? categoryId = null, string? search = null, int page = 1,
         int pageSize = 20)
     {
+        if (GetAllItemsFault is not null)
+            throw GetAllItemsFault;
+
         IEnumerable<Item> q = Items;
         if (categoryId is > 0)
             q = q.Where(i => i.CategoryId == categoryId);
@@ -40,6 +55,9 @@ public sealed class FakeItemRepository : IItemRepository
 
     public Task<Item> CreateItemAsync(Item item)
     {
+        if (CreateItemFault is not null)
+            throw CreateItemFault;
+
         item.Id = Items.Count == 0 ? 1 : Items.Max(i => i.Id) + 1;
         Items.Add(item);
         return Task.FromResult(item);
@@ -47,6 +65,9 @@ public sealed class FakeItemRepository : IItemRepository
 
     public Task<Item?> UpdateItemAsync(Item item)
     {
+        if (UpdateItemFault is not null)
+            throw UpdateItemFault;
+
         var ix = Items.FindIndex(i => i.Id == item.Id);
         if (ix < 0)
             return Task.FromResult<Item?>(null);
@@ -65,8 +86,13 @@ public sealed class FakeItemRepository : IItemRepository
         return Task.FromResult(true);
     }
 
-    public Task<List<Category>> GetAllCategoriesAsync() =>
-        Task.FromResult(Categories.OrderBy(c => c.Name).ToList());
+    public Task<List<Category>> GetAllCategoriesAsync()
+    {
+        if (GetCategoriesException is not null)
+            throw GetCategoriesException;
+
+        return Task.FromResult(Categories.OrderBy(c => c.Name).ToList());
+    }
 
     public Task<Category?> GetCategoryByIdAsync(int id) =>
         Task.FromResult(Categories.FirstOrDefault(c => c.Id == id));

@@ -27,6 +27,9 @@ public sealed class ApiTestService : IApiService
 
     private int _nextUserId = 1;
 
+    /// <summary>Optional delay so concurrent callers can observe <c>IsLoading</c> guards in view models.</summary>
+    public int GetUsersMeDelayMilliseconds { get; set; }
+
     /// <summary>Items keyed by Id (detail projections)</summary>
     private readonly Dictionary<int, ItemDetailApiDto> _itemsById = new();
 
@@ -132,14 +135,17 @@ public sealed class ApiTestService : IApiService
     }
 
     /// <inheritdoc />
-    public Task<(HttpStatusCode Status, UserMeApiDto? User, string? RawError)> GetUsersMeAsync(
+    public async Task<(HttpStatusCode Status, UserMeApiDto? User, string? RawError)> GetUsersMeAsync(
         CancellationToken cancellationToken = default)
     {
+        if (GetUsersMeDelayMilliseconds > 0)
+            await Task.Delay(GetUsersMeDelayMilliseconds, cancellationToken).ConfigureAwait(false);
+
         // Without a prior login, behave like anonymous access to profile.
         if (_currentUserProfile is null)
-            return Task.FromResult(((HttpStatusCode.Unauthorized, (UserMeApiDto?)null, (string?)"Not authenticated")));
+            return (HttpStatusCode.Unauthorized, (UserMeApiDto?)null, (string?)"Not authenticated");
 
-        return Task.FromResult(((HttpStatusCode.OK, (UserMeApiDto?)_currentUserProfile, (string?)null)));
+        return (HttpStatusCode.OK, (UserMeApiDto?)_currentUserProfile, (string?)null);
     }
 
     /// <summary>

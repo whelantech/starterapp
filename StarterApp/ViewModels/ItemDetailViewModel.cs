@@ -16,6 +16,7 @@ public partial class ItemDetailViewModel : BaseViewModel
     private readonly IAuthenticationService _authService;
     private readonly IRentalService _rentalService;
     private readonly INavigationService _navigationService;
+    private readonly IShellNavigation _shellNavigation;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(AvailabilityDisplay))]
@@ -50,12 +51,14 @@ public partial class ItemDetailViewModel : BaseViewModel
         IItemRepository repository,
         IAuthenticationService authService,
         IRentalService rentalService,
-        INavigationService navigationService)
+        INavigationService navigationService,
+        IShellNavigation shellNavigation)
     {
         _repository = repository;
         _authService = authService;
         _rentalService = rentalService;
         _navigationService = navigationService;
+        _shellNavigation = shellNavigation;
         Title = "Item details";
     }
 
@@ -184,7 +187,7 @@ public partial class ItemDetailViewModel : BaseViewModel
         if (Item == null || !CanEdit)
             return;
 
-        await Shell.Current.GoToAsync($"{nameof(CreateItemPage)}?id={Item.Id}");
+        await _shellNavigation.GoToAsync($"{nameof(CreateItemPage)}?id={Item.Id}");
     }
 
     private bool CanExecuteRent() => Item is not null && CanRent;

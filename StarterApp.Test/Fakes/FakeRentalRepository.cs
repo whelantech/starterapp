@@ -9,6 +9,10 @@ public sealed class FakeRentalRepository : IRentalRepository
 {
     public List<Rental> Rentals { get; } = new();
 
+    public Exception? GetOutgoingFault { get; set; }
+
+    public Exception? GetIncomingFault { get; set; }
+
     public Task<Rental> CreateRequestAsync(
         int itemId,
         int borrowerUserId,
@@ -40,6 +44,9 @@ public sealed class FakeRentalRepository : IRentalRepository
     public Task<IReadOnlyList<Rental>> GetIncomingAsync(int ownerUserId, string? statusFilter = null,
         CancellationToken cancellationToken = default)
     {
+        if (GetIncomingFault is not null)
+            throw GetIncomingFault;
+
         var q = Rentals.Where(r => r.OwnerId == ownerUserId);
         if (!string.IsNullOrWhiteSpace(statusFilter))
             q = q.Where(r => string.Equals(r.Status, statusFilter, StringComparison.OrdinalIgnoreCase));
@@ -49,6 +56,9 @@ public sealed class FakeRentalRepository : IRentalRepository
     public Task<IReadOnlyList<Rental>> GetOutgoingAsync(int borrowerUserId, string? statusFilter = null,
         CancellationToken cancellationToken = default)
     {
+        if (GetOutgoingFault is not null)
+            throw GetOutgoingFault;
+
         var q = Rentals.Where(r => r.BorrowerUserId == borrowerUserId);
         if (!string.IsNullOrWhiteSpace(statusFilter))
             q = q.Where(r => string.Equals(r.Status, statusFilter, StringComparison.OrdinalIgnoreCase));

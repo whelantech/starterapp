@@ -10,14 +10,31 @@ public sealed class FakeNavigationService : INavigationService
     public int NavigateToRootCount { get; private set; }
     public int PopToRootCount { get; private set; }
 
+    /// <summary>Optional exception thrown from <see cref="NavigateToAsync(string)"/> (and cleared after throw).</summary>
+    public Exception? NavigateToFault { get; set; }
+
     public Task NavigateToAsync(string route)
     {
+        if (NavigateToFault is not null)
+        {
+            var ex = NavigateToFault;
+            NavigateToFault = null;
+            throw ex;
+        }
+
         Navigations.Add((route, null));
         return Task.CompletedTask;
     }
 
     public Task NavigateToAsync(string route, Dictionary<string, object> parameters)
     {
+        if (NavigateToFault is not null)
+        {
+            var ex = NavigateToFault;
+            NavigateToFault = null;
+            throw ex;
+        }
+
         Navigations.Add((route, parameters));
         return Task.CompletedTask;
     }
