@@ -106,6 +106,18 @@ jobs:
             --settings coverlet.runsettings \
             --collect:"XPlat Code Coverage"
 
+      # Sonar "New Code" coverage stays empty when OpenCover is missing — fail here so logs show why.
+      - name: List OpenCover reports (Sonar)
+        run: |
+          set -euo pipefail
+          echo "OpenCover files under workspace:"
+          find "$GITHUB_WORKSPACE" -name 'coverage.opencover.xml' -type f
+          count=$(find "$GITHUB_WORKSPACE" -name 'coverage.opencover.xml' -type f | wc -l)
+          if [ "$count" -eq 0 ]; then
+            echo "::error::No coverage.opencover.xml found — Sonar cannot compute C# coverage. Check Coverlet collector output."
+            exit 1
+          fi
+
       - name: End Sonar Analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

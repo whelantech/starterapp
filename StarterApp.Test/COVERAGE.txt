@@ -1,7 +1,15 @@
 SonarCloud coverage (OpenCover, reliable with Sonar C# analyzer)
 
-- **SonarScanner for .NET** ignores `sonar-project.properties` in the repo (post-process fails if that file exists). OpenCover path and Sonar settings are set in `.github/workflows/build.yml` on `dotnet-sonarscanner begin` (`sonar.cs.opencover.reportsPaths`, exclusions, etc.).
+- **SonarScanner for .NET** ignores `sonar-project.properties` in the repo. OpenCover path and Sonar settings are in `.github/workflows/build.yml` on `dotnet-sonarscanner begin`.
 - CI generates OpenCover via Coverlet: test step uses `coverlet.runsettings` + `--collect:"XPlat Code Coverage"`.
-- Report files live under `StarterApp.Test/TestResults/.../coverage.opencover.xml`; the workflow tells Sonar to use the glob `**/coverage.opencover.xml`.
+- Report files live under `StarterApp.Test/TestResults/.../coverage.opencover.xml`; the workflow uses `sonar.cs.opencover.reportsPaths=**/coverage.opencover.xml`.
 - Local: `dotnet test StarterApp.sln -f net10.0 --settings coverlet.runsettings --collect:"XPlat Code Coverage"` and use the Attachment path from the test output.
-- Test vs production scope: the scanner discovers projects from the solution; `sonar.coverage.exclusions` trims test code from coverage metrics.
+- `sonar.coverage.exclusions` trims test assemblies from coverage metrics.
+
+Reading SonarCloud (why you might see “0 New Lines” / “not enough lines” on coverage):
+
+1. **Branch summary defaults to “New Code”** — lines/issues/coverage shown are only for code **changed in the new-code period** (e.g. last version or days). A first analysis or a run with no diff can show **0 New Lines** and coverage N/A even when the **whole project** was scanned.
+2. Open the project and switch to **Overall Code** (or the project **Measures** / full codebase view) to see **total LOC, issues, and overall coverage**.
+3. Tune **Administration → New Code** (project) if you want “new” to mean something else (e.g. previous version vs reference branch).
+4. Confirm **Organization** and **project key** in Sonar (`sonarcloud.io` URL + Project Information) match ` /o:` and `/k:` in the workflow (`whelantech`, `whelantech_starterapp`) — a mismatch means you are looking at a different project than CI uploads to.
+5. In GitHub Actions, open the **List OpenCover reports** step: if it fails, Coverlet did not write `coverage.opencover.xml` and Sonar will have no coverage to import.
