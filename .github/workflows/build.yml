@@ -52,9 +52,6 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore StarterApp.sln
 
-      - name: Install Tools
-        run: dotnet tool install --global dotnet-coverage
-
       - name: Cache SonarQube Cloud packages
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
@@ -87,9 +84,7 @@ jobs:
             /o:"whelantech" \
             /d:sonar.token="${{ secrets.SONAR_TOKEN }}" \
             /d:sonar.host.url="https://sonarcloud.io" \
-            /d:sonar.scanner.scanAll=false \
-            /d:sonar.cs.vscoveragexml.reportsPaths=coverage.xml \
-            /d:sonar.exclusions=**/Platforms/**,**/Resources/**,**/StarterApp.Migrations/**
+            /d:sonar.scanner.scanAll=false
 
       - name: Build solution (app, DB, migrations, test projects)
         env:
@@ -103,7 +98,9 @@ jobs:
           if [ -z "$ConnectionStrings__TestConnection" ]; then
             export ConnectionStrings__TestConnection='Host=postgres;Port=5432;Username=test_user;Password=test_password;Database=testdb'
           fi
-          dotnet-coverage collect "dotnet test StarterApp.sln -c Release -f net10.0 --no-build" -f xml -o "coverage.xml"
+          dotnet test StarterApp.sln -c Release -f net10.0 --no-build \
+            --settings coverlet.runsettings \
+            --collect:"XPlat Code Coverage"
 
       - name: End Sonar Analysis
         env:
